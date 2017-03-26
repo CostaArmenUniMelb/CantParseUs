@@ -100,17 +100,17 @@ type statement =
   | WhileDo of (expr * statement list) (*compound*)
     
 (*procedure body composed of declerations and statements*)
-type proc_body = (decleration list * statement list)
+type procedure_body = (decleration list * statement list)
   
 (*pass by type used in procedure param definitions*)
 type passby = | Value | Reference
   
 (*param definition (i.e. 'ref int paramName1') in procedure 
 definitions*)
-type param_def = (passby * type_def)
+type parameter_def = (passby * type_def)
   
 (*entire procedure including its definition and content*)
-type proc = (identifier * param_def list * proc_body)
+type procedure = (identifier * parameter_def list * procedure_body)
   
 (*an entire program is a sequence of procedures*)
-type program = proc list
+type program = procedure list

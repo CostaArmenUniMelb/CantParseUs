@@ -202,7 +202,7 @@ let format_procedure_body indent_num procedure =
   let formatted_statements = format_statement_list (add_indent indent_num) statements
   in
   match formatted_declerations with
-    | "" -> formatted_statements
+    | "" -> "\n" ^ formatted_statements
     | _ -> (reduce "\n\n" [formatted_declerations;formatted_statements])
      
 (*formats passby resulting in val or ref keywords*) 
@@ -228,7 +228,10 @@ let format_procedure procedure =
 
 (*formats a program by formatting a sequence of procedures and delimiting them by empty blank lines.*)
 let format_program procedure_list = 
-  let program = List.map (fun procedure -> format_procedure procedure) procedure_list |> reduce "\n\n"
+  let program = 
+    List.map (fun procedure -> format_procedure procedure) procedure_list 
+    |> List.rev 
+    |> reduce "\n\n"
   in
   program ^ "\n"
   
