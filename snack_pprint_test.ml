@@ -36,7 +36,19 @@ let procedure_main_declerations = [Single(Int,"m"); Single(Int,"n")]
   
 let read_n = Read(LId("n"))
 let n_gt_1 = Ebinop(Elval(LId("n")),Op_gt,Eint(1))
-let whiledo_1 = WhileDo(n_gt_1,[])
+let assign_m_n = Assign(LId("m"),Rexpr(Elval(LId("n"))))
+let m_gt_0 = Ebinop(Elval(LId("m")),Op_gt,Eint(0))
+let assign_n_n_minus_1 = Assign(LId("n"),Rexpr(Ebinop(Elval(LId("n")),Op_sub,Eint(1))))
+let assign_m_m_minus_1 = Assign(LId("m"),Rexpr(Ebinop(Elval(LId("m")),Op_sub,Eint(1))))
+let m_eq_0 = Ebinop(Elval(LId("m")),Op_eq,Eint(0))
+let proc_p_invoke = InvokeProc("p",[Elval(LId("n"))])
+let if_then_1 = IfThen(m_eq_0, [proc_p_invoke])
+let if_then_else_1_then_statements = [assign_n_n_minus_1; assign_m_m_minus_1; if_then_1]
+let assign_m_n_minus_m = Assign(LId("m"),Rexpr(Ebinop(Elval(LId("n")),Op_sub,Elval(LId("m")))))
+let if_then_else_1_else_statements = [assign_m_n_minus_m; assign_m_m_minus_1]
+let if_then_else_1 = IfThenElse(m_gt_0,if_then_else_1_then_statements,if_then_else_1_else_statements)
+let whiledo_2 = WhileDo(m_gt_0,[if_then_else_1])
+let whiledo_1 = WhileDo(n_gt_1,[assign_m_n; whiledo_2])
   
 let procedure_main_statements = [read_n; whiledo_1]
   
