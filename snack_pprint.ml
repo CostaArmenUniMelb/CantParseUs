@@ -1,54 +1,91 @@
+(*
+General Notes:
+This file contains all the functions to format
+the ast. All types defined in snack_ast.ml have an
+associated function with the prefix 'format_' which refers
+to, 'formatted'. i.e. 'datatype = Bool | Int | Float' from
+snack_ast.ml has a function here with the name 'format_datatype'
+which takes a parameter of type 'datatype'. This file also contains
+helper functions.
+*)
+
 open Snack_ast
 open Format
   
 (*helper functions - indenting and 'reductions'*)
-let indent num = 
+
+(*creates a specified number of spaces. 
+i.e. indent 5 -> '     ' *)
+let indent num_of_whitespace = 
   let rec indentation count spaces  =
     match spaces with
       | _ when count > 0 -> indentation (count-1) (" "^spaces)
       | _ -> spaces
   in
-  let result = indentation num "" in
-  if num <=0 then "" else result
+  let result = indentation num_of_whitespace "" in
+  if num_of_whitespace <=0 then "" else result
     
-let indent_list ind lst = lst |> List.map (fun p -> (indent ind) ^ p)
+(*indents an entire list by prefixing a specified number of whitespace 
+to all elements of that list.*)
+let indent_list num_of_whitespace list = 
+  list 
+  |> List.map (fun element -> (indent num_of_whitespace) ^ element)
   
-let add_indent ind = ind + 4
-
-let reduce str lst =
-  match lst with
+(*contains the level of whitespace increment per indentation. 
+i.e. 1 indent -> 4 whitespace chars*)
+let add_indent num_of_whitespace = num_of_whitespace + 4
+  
+(*reduces a list of strings and places a delimiting string between each 
+consequtive pair. i.e reduce "," ["a";"b";"c"] -> "a,b,c" *)
+let reduce delimiter list =
+  match list with
     | [] -> ""
-    | _ -> List.fold_left (fun s1 s2 -> s1 ^ str ^ s2) (List.hd lst) (List.tl lst)
+    | _ -> List.fold_left (fun s1 s2 -> s1 ^ delimiter ^ s2) (List.hd list) (List.tl list)
       
 (*formatted types*)
-let fmt_dataType bt = 
-  match bt with
+      
+(*each datatype type is simply formatted to its lowercase equivalent*)
+let format_dataType datatype = 
+  match datatype with
     | Bool -> "bool"
     | Int -> "int"
     | Float -> "float"
       
-let fmt_ident_dataType td =  
-  let (ident, datatype) = td
+(*formats the pair of datatype and identifier. 
+a space exists between a datatype and identifier.
+i.e. 'bool exampleIdentifierName' *)
+let format_dataType_identifier datatype_identifier =  
+  let (datatype, identifier) = datatype_identifier
   in
-  (fmt_dataType datatype) ^ " " ^ ident
+  (format_dataType datatype) ^ " " ^ identifier
     
-let fmt_int_range ir = 
-  let (min, max) = ir in
+(*formats a pair of ints to represent a range.
+i.e. 1 to 2 -> '1..2' *)
+let format_int_range int_pair = 
+  let (min, max) = int_pair in
   (string_of_int min) ^ ".." ^ (string_of_int max)
     
-let fmt_int_range_list irl = 
-  List.map (fun i -> fmt_int_range i) irl
+(*formats a list of int ranges which is used when declaring a 
+multi dim array*)
+let format_int_range_list int_range_list = 
+  List.map (fun i -> format_int_range i) int_range_list
   |> reduce ","
     
-let fmt_typedef td = 
-  match td with
-    | Single(i,b as s) -> fmt_ident_dataType s
-    | Array(i,b,il) -> 
-      (fmt_ident_dataType (i,b)) ^ "[" ^ (fmt_int_range_list il) ^ "]"
+(*formats all type definitions, single and array.
+i.e. 
+single: (bool,"exampleIdentifierName") -> bool exampleIdentifierName 
+array: (int,"exampleIdentifierName",[(1,2);(1,3)]) -> int exampleIdentifierName[1..2,1..3]
+*)
+let format_typedef typedef = 
+  match typedef with
+    | Single(datatype,identifier) -> format_dataType_identifier (datatype,identifier)
+    | Array(datatype,identifier,range_list) -> 
+      (format_dataType_identifier (datatype,identifier)) ^ "[" ^ (format_int_range_list range_list) ^ "]"
         
-  
-let fmt_binop bo =
-  match bo with
+(*formats binop as symbols. Spaces between wrapping expression elements is accounted 
+for in the expression formatter, not here*)
+let format_binop binop =
+  match binop with
     | Op_add -> "+"
     | Op_sub -> "-" 
     | Op_mul -> "*" 
@@ -61,176 +98,139 @@ let fmt_binop bo =
     | Op_lt_eq -> "<="
     | Op_gt -> ">"
     | Op_gt_eq -> ">=" 
-      
-let fmt_unop uo = 
-  match uo with
+     
+(*formats unary operation as symbol or keyword.*) 
+let format_unop unop = 
+  match unop with
     | Op_minus -> "-"
     | Op_not -> "not "
       
-let fmt_bool b = 
-  match b with
+let format_bool bool = 
+  match bool with
     | true -> "true"
     | false -> "false" 
-  
-let rec fmt_lvalue lval =
+      
+(*formats the left hand side of an assignment. 
+Note that lvalue and expression are mutually recursive types and therefore require 
+mutually recursive functions to format them. The 'and' keyword between the two
+formatting functions allows for this mutual recursion.*)
+let rec format_lvalue lval =
   match lval with
     | LId(i) -> i
-    | LArrayIndex(id,ind) -> 
-      let expr_list = fmt_expr_list ind in
-      id ^ "[" ^ expr_list ^ "]"
-    
-and fmt_expr e =
-  match e with
-    | Ebool(b) -> fmt_bool b
+    | LArrayElement(id,ind) -> 
+      let expression_list = format_expression_list ind in
+      id ^ "[" ^ expression_list ^ "]"
+
+(*formats a single expression*)
+and format_expression expression =
+  match expression with
+    | Estring(s) -> s
+    | Ebool(b) -> format_bool b
     | Eint(i) -> string_of_int i
     | Efloat(f) -> string_of_float f
-    | Elval(lval) -> fmt_lvalue lval
-    | Ebinop(eb) -> 
-      let (e1, b, e2) = eb
+    | Elval(lval) -> format_lvalue lval
+    | Ebinop(ebinop) -> 
+      let (expression1, binop, expression2) = ebinop
       in
-      reduce " " [(fmt_expr e1);(fmt_binop b);(fmt_expr e2)]
-    | Eunop(eu) -> 
-      let (u, e) = eu
+      reduce " " [(format_expression expression1);(format_binop binop);(format_expression expression2)]
+    | Eunop(eunop) -> 
+      let (unaryop, expression) = eunop
       in
-      (fmt_unop u) ^ (fmt_expr e)
-    | Eparens(e) -> "(" ^ fmt_expr e ^ ")"
-        
-and fmt_expr_list lst = List.map (fun e -> fmt_expr e) lst |> reduce ","
-        
-let fmt_rvalue rval =
-  match rval with
-    | Rexpr(e) -> fmt_expr e
-      
-let fmt_decl ind d = (indent ind) ^ fmt_typedef d ^ ";"
+      (format_unop unaryop) ^ (format_expression expression)
+    | Eparens(expression) -> "(" ^ format_expression expression ^ ")"
 
-let fmt_decl_list ind lst = 
-  List.map (fun s -> fmt_decl ind s) lst 
-  |> List.filter (fun d -> d <> "")
-  |> reduce "\n"
+(*formats a list of expressions for use in array access and proc invocation 
+hence the comma delimiting (reduce function)*)
+and format_expression_list list = List.map (fun expression -> format_expression expression) list |> reduce ","
   
-let rec fmt_stmt ind s =
-  let current_indent = indent ind 
-  in
-  match s with
-    | Assign(lval,rval) -> reduce " " [(fmt_lvalue lval);":=";(fmt_rvalue rval)] ^ ";"
-    | Read(lval) -> "read" ^ " " ^ (fmt_lvalue lval) ^ ";"
-    | Write(e) -> "write" ^ " " ^ (fmt_expr e) ^ ";" 
-    | InvokeProc(id,el) -> id ^ "(" ^ fmt_expr_list el ^ ")" ^ ";"
-    | IfThen(e,sl) -> 
-      "if " ^ fmt_expr e ^ " then\n" ^ 
-      fmt_stmt_list (add_indent ind) sl ^ "\n" ^ 
-      current_indent ^ "fi"
-    | IfThenElse(e,sl1,sl2) -> 
-      "if " ^ fmt_expr e ^ " then\n" ^ 
-      fmt_stmt_list (add_indent ind) sl1 ^ "\n" ^ 
-      current_indent ^ "else\n" ^ 
-        fmt_stmt_list (add_indent ind) sl2 ^ "\n" ^ 
-      current_indent ^ "fi"
-    | WhileDo(e,sl) -> 
-      "while " ^ fmt_expr e ^ " do\n" ^
-       fmt_stmt_list (add_indent ind) sl ^ "\n" ^
-       current_indent ^ "od"       
-and fmt_stmt_list ind lst = 
-  lst 
-  |> List.map (fun s -> fmt_stmt ind s) 
-  |> indent_list ind 
+(*formats right hand side of assignment statement*)
+let format_rvalue rval =
+  match rval with
+    | Rexpr(e) -> format_expression e
+      
+(*formats a decleration (typedef) by adding indentation and a semicolon to terminate the 
+atomic statement*)
+let format_decl indent_num typedef = (indent indent_num) ^ format_typedef typedef ^ ";"
+  
+(*formats a decleration list and delimits them by an endline character*)
+let format_decleration_list indent_num list = 
+  List.map (fun decleration -> format_decl indent_num decleration) list 
+  |> List.filter (fun decleration -> decleration <> "")
   |> reduce "\n"
     
-let fmt_proc_body ind p =
-  let decls = p.decls in
-  let stmts = p.stmts in
-  let fmt_decls = (fmt_decl_list (add_indent ind) decls)
+(*formats both atomic and compound statements. *)
+let rec format_statement indent_num statement =
+  let current_indent = indent indent_num 
   in
-  let fmt_stmts = fmt_stmt_list (add_indent ind) stmts
-  in
-  match fmt_decls with
-    | "" -> fmt_stmts
-    | _ -> (reduce "\n\n" [fmt_decls;fmt_stmts])
+  match statement with
+    | Assign(lvalue,rvalue) -> reduce " " [(format_lvalue lvalue);":=";(format_rvalue rvalue)] ^ ";"
+    | Read(lvalue) -> "read" ^ " " ^ (format_lvalue lvalue) ^ ";"
+    | Write(expression) -> "write" ^ " " ^ (format_expression expression) ^ ";" 
+    | InvokeProc(identifier,expression_list) -> identifier ^ "(" ^ format_expression_list expression_list ^ ")" ^ ";"
+    | IfThen(expression,statement_list) -> 
+      "if " ^ format_expression expression ^ " then\n" ^ 
+        format_statement_list (add_indent indent_num) statement_list ^ "\n" ^ 
+        current_indent ^ 
+      "fi"
+    | IfThenElse(expression,then_statement_list,else_statement_list) -> 
+      "if " ^ format_expression expression ^ " then\n" ^ 
+        format_statement_list (add_indent indent_num) then_statement_list ^ "\n" ^ 
+        current_indent ^ 
+      "else\n" ^ 
+        format_statement_list (add_indent indent_num) else_statement_list ^ "\n" ^ 
+        current_indent ^ 
+      "fi"
+    | WhileDo(expression,statement_list) -> 
+      "while " ^ format_expression expression ^ " do\n" ^
+        format_statement_list (add_indent indent_num) statement_list ^ "\n" ^
+        current_indent ^ 
+       "od"       
+(*formats a list of statements and delimits them with a newline*)
+and format_statement_list indent_num list = 
+  list 
+  |> List.map (fun statement -> format_statement indent_num statement) 
+  |> indent_list indent_num 
+  |> reduce "\n"
     
-let fmt_passby pb =
-  match pb with
+(*formats a procedure body. If no declerations exist, then leave empty otherwise separate
+declerations from statements with an empty blank line.*)
+let format_procedure_body indent_num procedure =
+  let (declerations,statements) = procedure 
+  in
+  let formatted_declerations = (format_decleration_list (add_indent indent_num) declerations)
+  in
+  let formatted_statements = format_statement_list (add_indent indent_num) statements
+  in
+  match formatted_declerations with
+    | "" -> formatted_statements
+    | _ -> (reduce "\n\n" [formatted_declerations;formatted_statements])
+     
+(*formats passby resulting in val or ref keywords*) 
+let format_passby passby =
+  match passby with
     | Value -> "val"
     | Reference -> "ref"
-   
-let fmt_param p =
-  let (passby, typedef) = p
-  in
-  (fmt_passby passby) ^ " " ^ (fmt_typedef typedef)
-    
-let fmt_proc p =
-  let (ident, params, program) = p
-  in
-  let fmt_params = List.map (fun p -> fmt_param p) params
-  in
-  let params_string = reduce ", " fmt_params
-  in
-  "proc " ^ ident ^ " (" ^ params_string ^ ")\n" ^ (fmt_proc_body 1 program) ^ "\nend"
-    
-let fmt_program pl = 
-  let result = List.map (fun p -> fmt_proc p) pl |> reduce "\n\n"
-  in
-  result ^ "\n"
-
-    
-(*tests*)
-let test_ast_print = 
-  print_string 
-    (
-       fmt_program
-       [
-       ( 
-          "proc1",
-          [
-            Value,Single("declIdentBool1",Bool);
-            Reference,Single("declIdentInt2",Int)
-          ],
-         {
-            decls = 
-            [
-              Single("declIdentBool1",Bool);
-              Single("declIdentInt2",Int);
-              Single("declIdentFloat3",Float);
-              Array("declIdentFloatArray3",Float,[(1,2);(1,3)])
-            ]; 
-            stmts = 
-              [
-                Assign(LId("assignIdent1"),Rexpr(Eparens(Ebinop(Eunop(Op_not,Ebool(true)),Op_or,Ebool(false)))));
-                Assign(LId("assignIdent2"),Rexpr(Eint(1)));
-                Assign(LId("assignIdent3"),Rexpr(Elval(LId("declIdentBool1"))));
-                Assign(LId("assignIdent4"),Rexpr(Ebinop(Eint(1),Op_add,Eunop(Op_minus,Efloat(2.1)))));
-                Assign(LArrayIndex("assignIdentFloatArray5",[Ebinop(Eint(1),Op_sub,Eint(2));Eint(5)]),Rexpr(Efloat(10.1)));
-                Assign(LArrayIndex("assignIdentFloatArray6",[Elval(LId("assignIdent2"))]),Rexpr(Efloat(10.1)));
-                Assign(LArrayIndex("assignIdentFloatArray6",[]),Rexpr(Efloat(10.1)));
-                Read(LId("readIdent3")); 
-                Write(Eunop(Op_minus,Elval(LId("assignIdent1"))));
-                InvokeProc("proc1",[Elval(LId("assignIdent1"));Eunop(Op_minus,Efloat(9.2))]);
-                InvokeProc("proc1",[]);
-                WhileDo(
-                   Eint(1),           
-                   [
-                     IfThenElse(
-                       Ebinop(Eint(1),Op_lt_eq,Efloat(2.1)),
-                       [Read(LId("readIdent3"));Write(Eunop(Op_minus,Elval(LId("assignIdent1"))))],
-                       [IfThen(Ebinop(Ebool(true),Op_not_eq,Eparens(Eunop(Op_not,Ebool(false)))),[Read(LId("readIdent3"));Write(Eunop(Op_minus,Elval(LId("assignIdent1"))))])]
-                     )
-                   ]                       
-                );
-                
-              ]
-         }
-       );
-         (
-          "proc2"
-          ,
-          [
-            
-          ],
-          {decls = [] ; stmts = [Read(LId("readIdent3"))]}
-         )
-       ]
-    )
       
-let _ = test_ast_print
+(*formats parametereter in procedure definition.
+i.e. format_parameter (Value,(Bool,"ExampleName")) -> 'val bool ExampleName' *)
+let format_parameter parameter =
+  let (passby, typedef) = parameter
+  in
+  (format_passby passby) ^ " " ^ (format_typedef typedef)
+    
+(*formats entire procedure (name, parameters and procedure body)*)
+let format_procedure procedure =
+  let (identifier, parameters, procedure_body) = procedure
+  in
+  let formatted_parameters = List.map (fun p -> format_parameter p) parameters |> reduce ", "
+  in
+  "proc " ^ identifier ^ " (" ^ formatted_parameters ^ ")\n" ^ (format_procedure_body 1 procedure_body) ^ "\nend"
+
+(*formats a program by formatting a sequence of procedures and delimiting them by empty blank lines.*)
+let format_program procedure_list = 
+  let program = List.map (fun procedure -> format_procedure procedure) procedure_list |> reduce "\n\n"
+  in
+  program ^ "\n"
   
   
   
