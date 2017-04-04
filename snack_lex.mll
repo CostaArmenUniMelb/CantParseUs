@@ -20,8 +20,8 @@ rule token = parse
 
   (* Variables *)
   | '\"'[^  '\n']*'\"' as lxm  { STRING_CONST lxm }   (*don't allow new line in the string*)
-  | ['-']?digits as lxm  { INT_CONST(int_of_string lxm) }
-  | ['-']?(digit * ['.'])?digits as lxm  { FLOAT_CONST(float_of_string lxm) }
+  | digits as lxm  { INT_CONST(int_of_string lxm) }
+  | (digit * ['.'])?digits as lxm  { FLOAT_CONST(float_of_string lxm) }
 
   (* Keywords *)
   | "true" { BOOL_CONST true }
