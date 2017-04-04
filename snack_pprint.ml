@@ -227,7 +227,7 @@ let format_procedure procedure =
   "proc " ^ identifier ^ " (" ^ formatted_parameters ^ ")\n" ^ (format_procedure_body 1 procedure_body) ^ "\nend"
 
 (*formats a program by formatting a sequence of procedures and delimiting them by empty blank lines.*)
-let format_program procedure_list = 
+let print_program procedure_list = 
   let program = 
     List.map (fun procedure -> format_procedure procedure) procedure_list 
     |> List.rev 

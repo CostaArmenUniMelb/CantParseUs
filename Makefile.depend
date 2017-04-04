@@ -1,0 +1,15 @@
+snack.cmo : snack_pprint.cmi snack_parse.cmi snack_lex.cmo
+snack.cmx : snack_pprint.cmx snack_parse.cmx snack_lex.cmx
+snack_ast.cmi :
+snack_parse.cmi : snack_ast.cmi
+snack_pprint.cmi : snack_ast.cmi
+snack_ast.cmo : snack_ast.cmi
+snack_ast.cmx : snack_ast.cmi
+snack_lex.cmo : snack_parse.cmi
+snack_lex.cmx : snack_parse.cmx
+snack_parse.cmo : snack_ast.cmi snack_parse.cmi
+snack_parse.cmx : snack_ast.cmx snack_parse.cmi
+snack_pprint.cmo : snack_ast.cmi snack_pprint.cmi
+snack_pprint.cmx : snack_ast.cmx snack_pprint.cmi
+snack.cmo : snack_pprint.cmi snack_parse.cmi snack_lex.cmo
+snack.cmx : snack_pprint.cmx snack_parse.cmx snack_lex.cmx

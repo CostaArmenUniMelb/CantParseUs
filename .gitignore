@@ -1,0 +1,9 @@
+*.byte
+*.cmi
+*.cmo
+*.cmx
+*.mli
+*.o
+snack
+calc
+test

@@ -60,7 +60,7 @@ let procedure_main = (procedure_main_identifier, procedure_main_parameters, proc
 let program = [procedure_q; procedure_p; procedure_main]
   
 (*print test*)
-let _ = print_string (format_program program)
+let _ = print_string (print_program program)
   
   
   
