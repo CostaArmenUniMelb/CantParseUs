@@ -1,0 +1,5 @@
+proc logical()
+    if 323-44 and ((not n <= 1) and a>b) or (a+34/56)-(56)* 54/546+54*(343+4)-(80*(2200-32)) then
+        out := n;
+    fi
+end
