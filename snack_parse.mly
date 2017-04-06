@@ -68,7 +68,7 @@ procedures:
   | { [] }
 
 procedure:
-  | procedure_head LPAREN parameter_defs RPAREN procedure_body END {($1,$3,$5)}
+  | procedure_head LPAREN parameter_defs RPAREN procedure_body END {($1,List.rev $3,$5)}
 
 procedure_head:
   | PROC IDENT {$2}
@@ -122,9 +122,9 @@ statement:
   | READ lvalue SEMICOLON { Read $2 }
   | WRITE expr SEMICOLON { Write $2 }
   | lvalue ASSIGN rvalue SEMICOLON { Assign ($1, $3) }
-  | IDENT LPAREN expr_commas RPAREN SEMICOLON { InvokeProc($1, $3) }
+  | IDENT LPAREN expr_commas RPAREN SEMICOLON { InvokeProc($1, List.rev $3) }
   | IF expr THEN statements FI { IfThen($2, List.rev $4) }
-  | IF expr THEN statements ELSE statements FI {IfThenElse($2, $4,List.rev $6) }
+  | IF expr THEN statements ELSE statements FI {IfThenElse($2, List.rev $4,List.rev $6) }
   | WHILE expr DO statements OD { WhileDo($2, List.rev $4) }
 
 rvalue :

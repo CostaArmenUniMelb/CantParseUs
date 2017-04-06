@@ -189,7 +189,7 @@ and format_expression expression =
 
 (*formats a list of expressions for use in array access and proc invocation 
 hence the comma delimiting (reduce function)*)
-and format_expression_list list = List.map (fun expression -> format_expression expression) list |> reduce ","
+and format_expression_list list = List.map (fun expression -> format_expression expression) list |> reduce ", "
   
 (*formats right hand side of assignment statement*)
 let format_rvalue rval =
