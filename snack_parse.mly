@@ -166,4 +166,4 @@ expr:
 
   | MINUS expr %prec UMINUS { Eunop (Op_minus, $2) }
   | NOT expr  { Eunop (Op_not, $2) }
-  | LPAREN expr RPAREN { $2 }
+  | LPAREN expr RPAREN { Eparens $2 }

@@ -110,6 +110,43 @@ let format_bool bool =
     | true -> "true"
     | false -> "false" 
       
+(*gets the binary operator in the expression if it exists*)
+let rec try_get_binop expression = 
+  match expression with
+    | Ebinop(ebinop) -> 
+      let (_, binop, _) = ebinop
+     	in
+      Some binop
+    | Eparens(expr) -> try_get_binop expr
+    | _ -> None
+      
+(*determines if two binary operators have the same precedence.
+equivalence sets are {add,sub} and {mul,div} *)
+let equal_precedence binop1 binop2 =
+  match binop1, binop2 with
+    | Op_add, Op_sub -> true
+    | Op_sub, Op_add -> true
+    | Op_add, Op_add -> true
+    | Op_sub, Op_sub -> true
+    | Op_mul, Op_div -> true
+    | Op_div, Op_mul -> true
+    | Op_mul, Op_mul -> true
+    | Op_div, Op_div -> true
+    | _ -> false
+          
+(*determines if the nested expressions in the binary expression have the same operator precedence
+as the top level operator. 
+i.e. expr0 = expr1 binop0 expr2 
+where expr1 = expr1_1 binop1 expr1_2 and expr2 = expr2_1 binop2 expr2_2
+if equal_precedence(binop0, binop1) then expr1 requires surrounding parenthesis 
+if equal_precedence(binop0, binop2) then expr2 requires surrounding parenthesis
+resulting in expr0 = (expr1) binop0 (expr2)
+*)
+let requires_parenthesis binop expression =
+  match (try_get_binop expression) with
+    | Some(expression_binop) -> equal_precedence binop expression_binop
+    | None -> false
+            
 (*formats the left hand side of an assignment. 
 Note that lvalue and expression are mutually recursive types and therefore require 
 mutually recursive functions to format them. The 'and' keyword between the two
@@ -131,13 +168,24 @@ and format_expression expression =
     | Elval(lval) -> format_lvalue lval
     | Ebinop(ebinop) -> 
       let (expression1, binop, expression2) = ebinop
+      in 
+      let formatted_expression1 =
+        match (requires_parenthesis binop expression1) with
+        | true -> "(" ^ (format_expression expression1) ^ ")"
+        | false -> (format_expression expression1)
       in
-      reduce " " [(format_expression expression1);(format_binop binop);(format_expression expression2)]
+      let formatted_expression2 =
+        match (requires_parenthesis binop expression2) with
+        | true -> "(" ^ (format_expression expression2) ^ ")"
+        | false -> (format_expression expression2) 
+      in
+      formatted_expression1^" "^ (format_binop binop)^" "^formatted_expression2
+          
     | Eunop(eunop) -> 
       let (unaryop, expression) = eunop
       in
       (format_unop unaryop) ^ (format_expression expression)
-    | Eparens(expression) -> "(" ^ format_expression expression ^ ")"
+    | Eparens(expression) -> format_expression expression
 
 (*formats a list of expressions for use in array access and proc invocation 
 hence the comma delimiting (reduce function)*)
