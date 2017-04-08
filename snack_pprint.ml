@@ -1,4 +1,6 @@
 (*
+Author: Costa Armen
+Purpose: To format and print the AST
 General Notes:
 This file contains all the functions to format
 the ast. All types defined in snack_ast.ml have an
@@ -51,9 +53,7 @@ let format_dataType datatype =
     | Int -> "int"
     | Float -> "float"
       
-(*formats the pair of datatype and identifier. 
-a space exists between a datatype and identifier.
-i.e. 'bool exampleIdentifierName' *)
+(*formats the pair of datatype and identifier.*)
 let format_dataType_identifier datatype_identifier =  
   let (datatype, identifier) = datatype_identifier
   in
@@ -120,8 +120,9 @@ let rec try_get_binop expression =
     | Eparens(expr) -> try_get_binop expr
     | _ -> None
           
-(*determines if the RHS child expression requires parenthesis based on associativity 
-and operator precedence *)
+(*determines if the RHS child expression requires parenthesis based on the operators 
+of a parent and it's rightmost child. The mapping of operator pairs and whether it 
+requires parenthesis was derived using precdence and associativity rules.*)
 let requires_parenthesis binop expression =
   match (try_get_binop expression) with
     | Some(expression_binop) -> 
@@ -202,7 +203,8 @@ let format_decl indent_num typedef = (indent indent_num) ^ format_typedef typede
   
 (*formats a decleration list and delimits them by an endline character*)
 let format_decleration_list indent_num list = 
-  List.map (fun decleration -> format_decl indent_num decleration) list 
+  list
+  |> List.map (fun decleration -> format_decl indent_num decleration)  
   |> List.filter (fun decleration -> decleration <> "")
   |> reduce "\n"
     
@@ -277,7 +279,8 @@ let format_procedure procedure =
 (*formats a program by formatting a sequence of procedures and delimiting them by empty blank lines.*)
 let print_program procedure_list = 
   let program = 
-    List.map (fun procedure -> format_procedure procedure) procedure_list 
+    procedure_list
+    |> List.map (fun procedure -> format_procedure procedure)  
     |> List.rev 
     |> reduce "\n\n"
   in

@@ -1,4 +1,6 @@
 (*
+Author: Costa Armen
+Purpose: To define the type structure of the AST 
 General Notes:
 All types for the ast are contained in this file. Some types contain
 comments on future extensibility. 
@@ -26,9 +28,7 @@ type type_def =
   | Single of (datatype * identifier)
   | Array of (datatype * identifier * range list)
     
-(*All binary operations. Bool, Comparison and Arithmetic.
-We may have to seperate these later on to aid in semantic
-analysis. i.e. bool_binop, arithmentic_binop*)
+(*All binary operations. Bool, Comparison and Arithmetic.*)
 type binop =
   | Op_add 
   | Op_sub 
@@ -71,10 +71,7 @@ and expr =
   | Eunop of (unop * expr)
   | Eparens of expr
 
-(* right hand side (rhs) of assignment statement. This was going 
-to be deleted as all rhs assignments are expressions which makes
-this a redundant wrapper. There was a comment that stated to leave
-this for future extension. *)
+(* right hand side (rhs) of assignment statement*)
 type rvalue =
   | Rexpr of expr
     
