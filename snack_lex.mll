@@ -1,3 +1,7 @@
+(*
+The lexer for the snack. 
+It reads the input symbols and generate tokens for the parser
+*)
 {
 open Snack_parse
 

@@ -1,8 +1,15 @@
+/*
+The parser for the snack. 
+It defines 
+1.the token types for the Lexer 
+2.the parser rules that are used to generate AST
+*/
+
 %{
 open Snack_ast
 %}
 
-/*Constants*/
+/*Variables*/
 %token <bool> BOOL_CONST
 %token <float> FLOAT_CONST
 %token <int> INT_CONST
@@ -60,6 +67,7 @@ open Snack_ast
 /* Rules */
 /*Start from top to bottom*/
 
+/*Program is the top most rule*/
 program:
   |procedures { $1}
 
@@ -70,6 +78,7 @@ procedures:
 procedure:
   | procedure_head LPAREN parameter_defs RPAREN procedure_body END {($1,List.rev $3,$5)}
 
+/*Procedure head could be an Identifier or the word "main"*/
 procedure_head:
   | PROC IDENT {$2}
   | PROC MAIN {"main"}
@@ -80,8 +89,8 @@ procedure_body:
 /*Parameters*/
 parameter_defs:
   | parameter_def { [$1]  }
-  | parameter_defs COMMA parameter_def { $3 :: $1 }
-  | { [] }
+  | parameter_defs COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
+  | { [] } /*allow blank parameter_def*/
 
 parameter_def:
   | VAL type_def {(Value,$2)}
@@ -90,11 +99,11 @@ parameter_def:
 /*Declarations*/
 /*Declaration must be reversed to be shown in the correct order*/
 decleration :
-  | type_def SEMICOLON {  $1 }
+  | type_def SEMICOLON { $1 }
 
 declerations :
   | declerations decleration { $2 :: $1 }
-  | { [] } /*allow blank*/
+  | { [] } 
 
 type_def :
   |datatype IDENT {Single ($1,$2)}
@@ -134,7 +143,7 @@ lvalue:
   | IDENT { LId $1 }
   | IDENT LBRACK expr_commas RBRACK  { LArrayElement( $1,$3) }
 
-/*Expression*/
+/*Expressions*/
 exprs:
   | exprs expr { $2 :: $1 }
   | { [] }
@@ -144,6 +153,7 @@ expr_commas:
   |expr { [$1]  }
   |expr_commas COMMA expr { $3 :: $1 }
 
+/*Expression*/
 expr:
   | BOOL_CONST { Ebool $1 }
   | INT_CONST { Eint $1 }
