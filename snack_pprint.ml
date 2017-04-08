@@ -119,32 +119,37 @@ let rec try_get_binop expression =
       Some binop
     | Eparens(expr) -> try_get_binop expr
     | _ -> None
-      
-(*determines if two binary operators have the same precedence.
-equivalence sets are {add,sub} and {mul,div} *)
-let equal_precedence binop1 binop2 =
-  match binop1, binop2 with
-    | Op_add, Op_sub -> true
-    | Op_sub, Op_add -> true
-    | Op_add, Op_add -> true
-    | Op_sub, Op_sub -> true
-    | Op_mul, Op_div -> true
-    | Op_div, Op_mul -> true
-    | Op_mul, Op_mul -> true
-    | Op_div, Op_div -> true
-    | _ -> false
           
-(*determines if the nested expressions in the binary expression have the same operator precedence
-as the top level operator. 
-i.e. expr0 = expr1 binop0 expr2 
-where expr1 = expr1_1 binop1 expr1_2 and expr2 = expr2_1 binop2 expr2_2
-if equal_precedence(binop0, binop1) then expr1 requires surrounding parenthesis 
-if equal_precedence(binop0, binop2) then expr2 requires surrounding parenthesis
-resulting in expr0 = (expr1) binop0 (expr2)
-*)
+(*determines if the RHS child expression requires parenthesis based on associativity 
+and operator precedence *)
 let requires_parenthesis binop expression =
   match (try_get_binop expression) with
-    | Some(expression_binop) -> equal_precedence binop expression_binop
+    | Some(expression_binop) -> 
+      let binops_require_parens =
+        match binop, expression_binop with
+          | Op_mul, Op_mul -> false
+          | Op_mul, Op_div -> false
+          | Op_mul, Op_add -> true
+          | Op_mul, Op_sub -> true
+          | Op_div, Op_mul -> true
+          | Op_div, Op_div -> true
+          | Op_div, Op_add -> true
+          | Op_div, Op_sub -> true
+          | Op_add, Op_mul -> false
+          | Op_add, Op_div -> false
+          | Op_add, Op_add -> false
+          | Op_add, Op_sub -> false
+          | Op_sub, Op_mul -> false
+          | Op_sub, Op_div -> false
+          | Op_sub, Op_add -> true
+          | Op_sub, Op_sub -> true
+          | Op_and, Op_and -> false
+          | Op_and, Op_or -> true
+          | Op_or, Op_or -> false
+          | Op_or, Op_and -> false
+          | _ -> false
+      in
+      binops_require_parens
     | None -> false
             
 (*formats the left hand side of an assignment. 
@@ -169,17 +174,12 @@ and format_expression expression =
     | Ebinop(ebinop) -> 
       let (expression1, binop, expression2) = ebinop
       in 
-      let formatted_expression1 =
-        match (requires_parenthesis binop expression1) with
-        | true -> "(" ^ (format_expression expression1) ^ ")"
-        | false -> (format_expression expression1)
-      in
       let formatted_expression2 =
         match (requires_parenthesis binop expression2) with
         | true -> "(" ^ (format_expression expression2) ^ ")"
         | false -> (format_expression expression2) 
       in
-      formatted_expression1^" "^ (format_binop binop)^" "^formatted_expression2
+      (format_expression expression1)^" "^ (format_binop binop)^" "^formatted_expression2
           
     | Eunop(eunop) -> 
       let (unaryop, expression) = eunop
