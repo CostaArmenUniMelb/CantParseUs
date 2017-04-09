@@ -1,21 +1,58 @@
 proc logical()
     if 323-44 and ((not n <= 1) and a>b) or (a+34/56)-(56)* 54/546+54*(343+4)-(80*(2200-32)) then
     	#Test all possibilities
+		a:=2*(3*4);
+		a:=2*(3/4);
+		a:=2*(3+4);
+		a:=2*(3-4);
+		a:=2/(3*4);
+		a:=2/(3/4);
+		a:=2/(3+4);
+		a:=2/(3-4);
+		a:=2+(3*4);
+		a:=2+(3/4);
+		a:=2+(3+4);
+		a:=2+(3-4);
+		a:=2-(3*4);
+		a:=2-(3/4);
+		a:=2-(3+4);
+		a:=2-(3-4);
 
-        #passed
-        a:= (not a);
-        a:=a+b*c;
-        a:=a+(b*c);
-        a:=a+(b+c);
-        a:=(a+b)+c;
-        a:=a+(b-c);
-        a:=(a-b)+c;
-        a:=a-(b-c);
-        a:=(a-b)-c;
+        a:=(2*3)*4;
+		a:=(2*3)/4;
+		a:=(2*3)+4;
+		a:=(2*3)-4;
+		a:=(2/3)*4;
+		a:=(2/3)/4;
+		a:=(2/3)+4;
+		a:=(2/3)-4;
+		a:=(2+3)*4;
+		a:=(2+3)/4;
+		a:=(2+3)+4;
+		a:=(2+3)-4;
+		a:=(2-3)*4;
+		a:=(2-3)/4;
+		a:=(2-3)+4;
+		a:=(2-3)-4;
 
-        #failed
-        a:=(a+b)*c;
-        a:=(a-b)*c;
+
+        #Need to omit all prenthesis
+        a:=(a and b) and c;
+        a:=a and (b and c);
+        a:=(a and b and c);
+
+        a:=(a or b) or c;
+        a:=a or (b or c);
+        a:=(a or b or c);
+
+        a:=(a and b) or c;
+        a:=a or (b and c);
+
+        #Need to keep all prenthesis
+        a:=a and (b or c);
+        a:=(a or b) and c;
+        a:=(a and b) or c;
+        a:=a or (b and c);
 
     fi
 end

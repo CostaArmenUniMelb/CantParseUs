@@ -120,34 +120,40 @@ let rec try_get_binop expression =
     | Eparens(expr) -> try_get_binop expr
     | _ -> None
           
-(*determines if the RHS child expression requires parenthesis based on the operators 
+(*determines if the RHS or LHS child expression requires parenthesis based on the operators 
 of a parent and it's rightmost child. The mapping of operator pairs and whether it 
 requires parenthesis was derived using precdence and associativity rules.*)
-let requires_parenthesis binop expression =
+let requires_parenthesis binop expression isLHS =
   match (try_get_binop expression) with
     | Some(expression_binop) -> 
       let binops_require_parens =
-        match binop, expression_binop with
-          | Op_mul, Op_mul -> false
-          | Op_mul, Op_div -> false
-          | Op_mul, Op_add -> true
-          | Op_mul, Op_sub -> true
-          | Op_div, Op_mul -> true
-          | Op_div, Op_div -> true
-          | Op_div, Op_add -> true
-          | Op_div, Op_sub -> true
-          | Op_add, Op_mul -> false
-          | Op_add, Op_div -> false
-          | Op_add, Op_add -> false
-          | Op_add, Op_sub -> false
-          | Op_sub, Op_mul -> false
-          | Op_sub, Op_div -> false
-          | Op_sub, Op_add -> true
-          | Op_sub, Op_sub -> true
-          | Op_and, Op_and -> false
-          | Op_and, Op_or -> true
-          | Op_or, Op_or -> false
-          | Op_or, Op_and -> false
+        match binop, expression_binop, isLHS with
+          | Op_mul, Op_mul,_ -> false
+          | Op_mul, Op_div, true -> false (*e.g. (3*5)/7) *)
+          | Op_mul, Op_div, false -> true (*e.g. 3*(5/7) *)
+          | Op_mul, Op_add,_ -> true
+          | Op_mul, Op_sub,_ -> true
+          | Op_div, Op_mul, true -> false
+          | Op_div, Op_mul, false -> true
+          | Op_div, Op_div, true -> false
+          | Op_div, Op_div, false -> true
+          | Op_div, Op_add,_ -> true
+          | Op_div, Op_sub,_ -> true
+          | Op_add, Op_mul,_ -> false
+          | Op_add, Op_div,_ -> false
+          | Op_add, Op_add,_ -> false
+          | Op_add, Op_sub, true -> false
+          | Op_add, Op_sub, false -> true
+          | Op_sub, Op_mul,_ -> false
+          | Op_sub, Op_div,_ -> false
+          | Op_sub, Op_add, true -> false
+          | Op_sub, Op_add, false -> true
+          | Op_sub, Op_sub, true -> false   (*e.g. (3-5)-6*) 
+          | Op_sub, Op_sub, false -> true   (*e.g. 3-(5-6)*)
+          | Op_and, Op_and,_ -> false
+          | Op_and, Op_or,_ -> true
+          | Op_or, Op_or,_ -> false
+          | Op_or, Op_and,_ -> true
           | _ -> false
       in
       binops_require_parens
@@ -175,12 +181,17 @@ and format_expression expression =
     | Ebinop(ebinop) -> 
       let (expression1, binop, expression2) = ebinop
       in 
+      let formatted_expression1 =
+        match (requires_parenthesis binop expression1 true) with
+        | true -> "(" ^ (format_expression expression1) ^ ")"
+        | false -> (format_expression expression1) 
+      in
       let formatted_expression2 =
-        match (requires_parenthesis binop expression2) with
+        match (requires_parenthesis binop expression2 false) with
         | true -> "(" ^ (format_expression expression2) ^ ")"
         | false -> (format_expression expression2) 
       in
-      (format_expression expression1)^" "^ (format_binop binop)^" "^formatted_expression2
+      (formatted_expression1)^" "^ (format_binop binop)^" "^formatted_expression2
           
     | Eunop(eunop) -> 
       let (unaryop, expression) = eunop
