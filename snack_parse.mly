@@ -55,10 +55,10 @@ open Snack_ast
 %token EOF
 
 /*Priority*/
-%nonassoc EQ LT
-%left PLUS MINUS
-%left MUL DIV
-%nonassoc UMINUS
+%nonassoc EQ LT MT LTEQ MTEQ
+%left PLUS MINUS  /*Lower precendence*/
+%left MUL DIV     /*Higher precendence*/
+%nonassoc UMINUS  /*Highest precendence*/
 
 %type <Snack_ast.program> program
 
@@ -69,7 +69,7 @@ open Snack_ast
 
 /*Program is the top most rule*/
 program:
-  |procedures { $1}
+  | procedures { $1}
 
 procedures:
   | procedures procedure { $2 :: $1 }
