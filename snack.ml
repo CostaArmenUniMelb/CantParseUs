@@ -30,6 +30,7 @@ let main () =
   let prog = Snack_parse.program Snack_lex.token lexbuf in
   match !mode with
   | PrettyPrint ->print_string (Snack_pprint.print_program prog)
-  | Compile -> ()
+  | Compile -> print_string ("Sorry, cannot generate code yet\n")
+
 
 let _ = main ()
