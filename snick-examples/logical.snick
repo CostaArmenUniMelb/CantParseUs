@@ -56,3 +56,22 @@ proc logical()
 
     fi
 end
+
+proc logical2()
+
+end
+
+proc main()
+float x;
+float result;
+int n;
+end
+
+proc function2()
+
+end
+
+proc function3()
+
+end
+

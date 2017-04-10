@@ -67,21 +67,20 @@ open Snack_ast
 /* Rules */
 /*Start from top to bottom*/
 
-/*Program is the top most rule*/
+/*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures { $1}
+  | procedures procedure_main procedures { List.append $3 ($2::$1) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
   | { [] }
 
 procedure:
-  | procedure_head LPAREN parameter_defs RPAREN procedure_body END {($1,List.rev $3,$5)}
+  | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END {($2,List.rev $4,$6)}
 
 /*Procedure head could be an Identifier or the word "main"*/
-procedure_head:
-  | PROC IDENT {$2}
-  | PROC MAIN {"main"}
+procedure_main:
+  | PROC MAIN LPAREN parameter_defs RPAREN procedure_body END {("main",List.rev $4,$6)}
 
 procedure_body:
   | declerations statements {(List.rev $1,List.rev $2)}
