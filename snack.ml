@@ -27,10 +27,12 @@ let main () =
   (* Initialize lexing buffer *)
   let lexbuf = Lexing.from_channel infile in
   (* Call the parser *)
-  let prog = Snack_parse.program Snack_lex.token lexbuf in
-  match !mode with
-  | PrettyPrint ->print_string (Snack_pprint.print_program prog)
-  | Compile -> print_string ("Sorry, cannot generate code yet\n")
-
+  try
+    let prog = Snack_parse.program Snack_lex.token lexbuf in
+    match !mode with
+    | PrettyPrint ->print_string (Snack_pprint.print_program prog)
+    | Compile -> print_string ("Sorry, cannot generate code yet\n")
+  with
+    | Parsing.Parse_error -> Snack_lex.raise_parser_fail lexbuf 
 
 let _ = main ()

@@ -6,10 +6,22 @@ It reads the input symbols and generate tokens for the parser
 open Snack_parse
 
 (*Exception for error detection*)
-exception Unknown_Token of string;;
+exception Lexer_error of string;;
+exception Parser_error of string;;
 
-(*For tracking current line number*)
-let current_line = ref 1;;
+(* Show the error position*)
+let error_pos lexbuf = 
+  let pos = Lexing.lexeme_start_p lexbuf in
+  let col = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
+  let token = Lexing.lexeme lexbuf in
+  Format.sprintf "Token:'%s', Line: %d, Column: %d" token pos.Lexing.pos_lnum col 
+
+(*Raise an error if any*)
+let raise_lexer_fail lexbuf =
+  raise(Lexer_error  (error_pos lexbuf))
+
+let raise_parser_fail lexbuf =
+  raise(Parser_error (error_pos lexbuf))
 }
 
 let digit = ['0' - '9']
@@ -20,7 +32,7 @@ let ident = (alpha | '_') alnum*
 rule token = parse
   (* Escape chars *)
   [' ' '\t']    { token lexbuf }     (* skip blanks *)
-  | '\n'      { Lexing.new_line lexbuf ; incr current_line; token lexbuf } (* Increment line number for error detection *)
+  | '\n'      { Lexing.new_line lexbuf ; token lexbuf } (* Increment line number for error detection *)
 
   (* Variables *)
   | '\"'[^  '\n']*'\"' as lxm  { STRING_CONST lxm }   (*don't allow new line in the string*)
@@ -79,10 +91,10 @@ rule token = parse
   | '#' { comment lexbuf } (* go to the rule for the comment*)
 
   (*Throw the Unknown_Token error when not match any token*)
-  | _ { raise (Unknown_Token ("Unexpected char: \"" ^ Lexing.lexeme lexbuf ^ "\" at line : " ^ string_of_int !current_line))} 
+  | _ { raise_lexer_fail lexbuf} 
 
 (*parse comment with different rules*)
 and comment = parse 
-             '\n' { incr current_line; token lexbuf }  (* return to the regular rule after finding a new line *)
-              | eof { current_line :=1; EOF } (* terminate if found EOF*)
+             '\n' { token lexbuf }  (* return to the regular rule after finding a new line *)
+              | eof { EOF } (* terminate if found EOF*)
               | _ { comment lexbuf } (* keep skipping chars until finding a new line*)
