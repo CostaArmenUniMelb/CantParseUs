@@ -128,32 +128,17 @@ let requires_parenthesis binop expression isLHS =
     | Some(expression_binop) -> 
       let binops_require_parens =
         match binop, expression_binop, isLHS with
-          | Op_mul, Op_mul,_ -> false
-          | Op_mul, Op_div, true -> false (*e.g. (3*5)/7) *)
           | Op_mul, Op_div, false -> true (*e.g. 3*(5/7) *)
-          | Op_mul, Op_add,_ -> true
-          | Op_mul, Op_sub,_ -> true
-          | Op_div, Op_mul, true -> false
-          | Op_div, Op_mul, false -> true
-          | Op_div, Op_div, true -> false
-          | Op_div, Op_div, false -> true
-          | Op_div, Op_add,_ -> true
-          | Op_div, Op_sub,_ -> true
-          | Op_add, Op_mul,_ -> false
-          | Op_add, Op_div,_ -> false
-          | Op_add, Op_add,_ -> false
-          | Op_add, Op_sub, true -> false
-          | Op_add, Op_sub, false -> true
-          | Op_sub, Op_mul,_ -> false
-          | Op_sub, Op_div,_ -> false
-          | Op_sub, Op_add, true -> false
-          | Op_sub, Op_add, false -> true
-          | Op_sub, Op_sub, true -> false   (*e.g. (3-5)-6*) 
-          | Op_sub, Op_sub, false -> true   (*e.g. 3-(5-6)*)
-          | Op_and, Op_and,_ -> false
-          | Op_and, Op_or,_ -> true
-          | Op_or, Op_or,_ -> false
-          | Op_or, Op_and,_ -> true
+          | Op_mul, Op_add, _ -> true   (*e.g. 3*(5+7) *)
+          | Op_mul, Op_sub, _ -> true   (*e.g. 3*(5-7) *)
+          | Op_div, Op_mul, false -> true (*e.g. 3/(5*7) *)
+          | Op_div, Op_div, false -> true (*e.g. 3/(5/7) *)
+          | Op_div, Op_add, _ -> true (*e.g. 3/(5+7) *)
+          | Op_div, Op_sub, _ -> true (*e.g. 3/(5-7) *)
+          | Op_sub, Op_add, false -> true(*e.g. 3-(5+7) *)
+          | Op_sub, Op_sub, false -> true   (*e.g. 3-(5-7)*)
+          | Op_and, Op_or, _ -> true
+          | Op_or, Op_and, _ -> true
           | _ -> false
       in
       binops_require_parens
