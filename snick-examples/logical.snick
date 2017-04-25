@@ -58,20 +58,21 @@ proc logical()
 end
 
 proc logical2()
-
+	a:=2*(3*4);
 end
 
 proc main()
 float x;
 float result;
 int n;
+	a:=2*(3*4);
 end
 
 proc function2()
-
+	a:=2*(3*4);
 end
 
 proc function3()
-
+	a:=2*(3*4);
 end
 

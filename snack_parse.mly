@@ -124,7 +124,7 @@ range:
 /* Builds statements in reverse order */
 statements:
   | statements statement { $2 :: $1 }
-  | { [] }
+  | statement { [$1] }
 
 statement:
   | READ lvalue SEMICOLON { Read $2 }
