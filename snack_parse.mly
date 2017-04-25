@@ -78,9 +78,9 @@ procedures:
 procedure:
   | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END {($2,List.rev $4,$6)}
 
-/*Procedure head could be an Identifier or the word "main"*/
+/*Procedure "main" are parameterless*/
 procedure_main:
-  | PROC MAIN LPAREN parameter_defs RPAREN procedure_body END {("main",List.rev $4,$6)}
+  | PROC MAIN LPAREN RPAREN procedure_body END {("main", [] ,$5)}
 
 procedure_body:
   | declerations statements {(List.rev $1,List.rev $2)}
