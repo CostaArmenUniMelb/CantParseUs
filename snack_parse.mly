@@ -80,10 +80,10 @@ procedure:
 
 /*Procedure "main" are parameterless*/
 procedure_main:
-  | PROC MAIN LPAREN RPAREN procedure_body END {("main", [] ,$5)}
+  | PROC MAIN LPAREN RPAREN procedure_body END { ("main", [] ,$5) }
 
 procedure_body:
-  | declerations statements {(List.rev $1,List.rev $2)}
+  | declerations statements { (List.rev $1, List.rev $2) }
 
 /*Parameters*/
 parameter_defs:
@@ -105,8 +105,8 @@ declerations :
   | { [] } 
 
 type_def :
-  |datatype IDENT {Single ($1,$2)}
-  |datatype IDENT ranges {Array ($1,$2,$3)}
+  | datatype IDENT {Single ($1,$2)}
+  | datatype IDENT LBRACK ranges RBRACK {Array ($1, $2, $4)}
 
 datatype:
   | BOOL { Bool }
@@ -114,11 +114,11 @@ datatype:
   | FLOAT { Float }
 
 ranges:
-  | ranges COMMA range {$3 :: $1}
-  | range {[$1]}
-
+  |  ranges COMMA range  { $3 :: $1 }
+  |  range  { [$1] }
+ 
 range:
-  | LBRACK INT_CONST DDOT INT_CONST RBRACK {($2,$4)}
+  | INT_CONST DDOT INT_CONST  { ($1, $3) }
 
 /*Statements*/
 /* Builds statements in reverse order */
