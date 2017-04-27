@@ -88,7 +88,7 @@ procedure_body:
 /*Parameters*/
 parameter_defs:
   | parameter_defs_body { $1 }
-  | { [] } /*allow blank parameter_def*/
+  | { [] } /*allow blank parameter_def */
 
 /*Parameters can be connected by comma*/
 parameter_defs_body:
@@ -134,7 +134,7 @@ statement:
   | READ lvalue SEMICOLON { Read $2 }
   | WRITE expr SEMICOLON { Write $2 }
   | lvalue ASSIGN rvalue SEMICOLON { Assign ($1, $3) }
-  | IDENT LPAREN expr_commas RPAREN SEMICOLON { InvokeProc($1, List.rev $3) }
+  | IDENT LPAREN exprs RPAREN SEMICOLON { InvokeProc($1, List.rev $3) }
   | IF expr THEN statements FI { IfThen($2, List.rev $4) }
   | IF expr THEN statements ELSE statements FI {IfThenElse($2, List.rev $4,List.rev $6) }
   | WHILE expr DO statements OD { WhileDo($2, List.rev $4) }
@@ -144,17 +144,13 @@ rvalue :
 
 lvalue:
   | IDENT { LId $1 }
-  | IDENT LBRACK expr_commas RBRACK  { LArrayElement( $1,$3) }
+  | IDENT LBRACK exprs RBRACK  { LArrayElement( $1, List.rev $3) }
 
 /*Expressions*/
-exprs:
-  | exprs expr { $2 :: $1 }
-  | { [] }
-
 /*Multiple expressions connected by ","*/
-expr_commas:
+exprs:
   |expr { [$1]  }
-  |expr_commas COMMA expr { $3 :: $1 }
+  |exprs COMMA expr { $3 :: $1 }
 
 /*Expression*/
 expr:
