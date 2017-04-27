@@ -100,13 +100,12 @@ parameter_def:
   | REF type_def {(Reference,$2)}
 
 /*Declarations*/
-/*Declaration must be reversed to be shown in the correct order*/
-decleration :
-  | type_def SEMICOLON { $1 }
-
 declerations :
   | declerations decleration { $2 :: $1 }
-  | { [] } 
+  | { [] } /*Declaration can be blank*/
+
+decleration :
+  | type_def SEMICOLON { $1 }
 
 type_def :
   | datatype IDENT {Single ($1,$2)}
@@ -134,7 +133,7 @@ statement:
   | READ lvalue SEMICOLON { Read $2 }
   | WRITE expr SEMICOLON { Write $2 }
   | lvalue ASSIGN rvalue SEMICOLON { Assign ($1, $3) }
-  | IDENT LPAREN exprs RPAREN SEMICOLON { InvokeProc($1, List.rev $3) }
+  | IDENT LPAREN exprs_nullable RPAREN SEMICOLON { InvokeProc($1, List.rev $3) } /* Invoke procedure*/
   | IF expr THEN statements FI { IfThen($2, List.rev $4) }
   | IF expr THEN statements ELSE statements FI {IfThenElse($2, List.rev $4,List.rev $6) }
   | WHILE expr DO statements OD { WhileDo($2, List.rev $4) }
@@ -152,13 +151,18 @@ exprs:
   |expr { [$1]  }
   |exprs COMMA expr { $3 :: $1 }
 
+/* Allow Expression to be blank, used for invoking a function */
+exprs_nullable: 
+  |exprs { $1  }
+  |{ [] }
+
 /*Expression*/
 expr:
   | BOOL_CONST { Ebool $1 }
   | INT_CONST { Eint $1 }
   | FLOAT_CONST { Efloat $1 }
   | STRING_CONST { Estring $1 }
-  | lvalue { Elval $1 }
+  | lvalue { Elval $1 } 
 
   | expr PLUS expr { Ebinop ($1, Op_add, $3) }
   | expr MINUS expr { Ebinop ($1, Op_sub, $3) }
