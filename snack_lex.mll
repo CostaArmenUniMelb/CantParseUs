@@ -1,6 +1,6 @@
 (*
 The lexer for the snack. 
-It reads the input symbols and generate tokens for the parser
+It reads the input and generate tokens for the parser
 *)
 {
 open Snack_parse
@@ -29,13 +29,17 @@ let alpha = ['a' - 'z' 'A' - 'Z']
 let alnum = alpha | '_' | '\'' | digit
 let digits = digit+
 let ident = (alpha | '_') alnum*
+let comment = '#'[^'\n']*'\n'
+let string = '\"'[^  '\n' '\t' '\"']*'\"'
+
 rule token = parse
   (* Escape chars *)
-  [' ' '\t']    { token lexbuf }     (* skip blanks *)
+  [' ' '\t']    { token lexbuf }     (* skip blanks or tab *)
   | '\n'      { Lexing.new_line lexbuf ; token lexbuf } (* Increment line number for error detection *)
+  | comment { token lexbuf }   (* skip comments *)
 
   (* Variables *)
-  | '\"'[^  '\n' '\t' '\"']*'\"' as lxm  { STRING_CONST lxm }   (*don't allow new line, tab, quotes in the string*)
+  | string as lxm  { STRING_CONST lxm }   (*don't allow new line, tab, quotes in the string*)
   | '-'?digits as lxm  { INT_CONST(int_of_string lxm) }
   | '-'?(digit * ['.'])?digits as lxm  { FLOAT_CONST(float_of_string lxm) }
 
@@ -86,15 +90,8 @@ rule token = parse
   (*Indetifier*)
   | ident as lxm  { IDENT lxm } (*give the lower priorifor the identifier to make sure that it will match other symbols first*)
 
-  (*Other symbols*)
+  (*End of file*)
   | eof { EOF } (* terminate if found EOF*)
-  | '#' { comment lexbuf } (* go to the rule for the comment*)
 
   (*Throw the Unknown_Token error when not match any token*)
   | _ { raise_lexer_fail lexbuf} 
-
-(*parse comment with different rules*)
-and comment = parse 
-             '\n' { token lexbuf }  (* return to the regular rule after finding a new line *)
-              | eof { EOF } (* terminate if found EOF*)
-              | _ { comment lexbuf } (* keep skipping chars until finding a new line*)
