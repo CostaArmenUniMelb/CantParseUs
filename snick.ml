@@ -1,4 +1,4 @@
-module P = Snack_parse
+module P = Snick_parse
 
 (* Argument parsing code *)
 let infile_name = ref None
@@ -28,11 +28,11 @@ let main () =
   let lexbuf = Lexing.from_channel infile in
   (* Call the parser *)
   try
-    let prog = Snack_parse.program Snack_lex.token lexbuf in
+    let prog = Snick_parse.program Snick_lex.token lexbuf in
     match !mode with
-    | PrettyPrint ->print_string (Snack_pprint.print_program prog)
+    | PrettyPrint ->print_string (Snick_pprint.print_program prog)
     | Compile -> print_string ("Sorry, cannot generate code yet\n")
   with
-    | Parsing.Parse_error -> Snack_lex.raise_parser_fail lexbuf 
+    | Parsing.Parse_error -> Snick_lex.raise_parser_fail lexbuf 
 
 let _ = main ()

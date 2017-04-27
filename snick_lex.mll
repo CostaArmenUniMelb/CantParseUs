@@ -3,7 +3,7 @@ The lexer for the snack.
 It reads the input and generate tokens for the parser
 *)
 {
-open Snack_parse
+open Snick_parse
 
 (*Exception for error detection*)
 exception Lexer_error of string;;

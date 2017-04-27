@@ -1,15 +1,15 @@
-snack.cmo : snack_pprint.cmi snack_parse.cmi snack_lex.cmo
-snack.cmx : snack_pprint.cmx snack_parse.cmx snack_lex.cmx
-snack_ast.cmi :
-snack_parse.cmi : snack_ast.cmi
-snack_pprint.cmi : snack_ast.cmi
-snack_ast.cmo : snack_ast.cmi
-snack_ast.cmx : snack_ast.cmi
-snack_lex.cmo : snack_parse.cmi
-snack_lex.cmx : snack_parse.cmx
-snack_parse.cmo : snack_ast.cmi snack_parse.cmi
-snack_parse.cmx : snack_ast.cmx snack_parse.cmi
-snack_pprint.cmo : snack_ast.cmi snack_pprint.cmi
-snack_pprint.cmx : snack_ast.cmx snack_pprint.cmi
-snack.cmo : snack_pprint.cmi snack_parse.cmi snack_lex.cmo
-snack.cmx : snack_pprint.cmx snack_parse.cmx snack_lex.cmx
+snick.cmo : snick_pprint.cmi snick_parse.cmi snick_lex.cmo
+snick.cmx : snick_pprint.cmx snick_parse.cmx snick_lex.cmx
+snick_ast.cmi :
+snick_parse.cmi : snick_ast.cmi
+snick_pprint.cmi : snick_ast.cmi
+snick_ast.cmo : snick_ast.cmi
+snick_ast.cmx : snick_ast.cmi
+snick_lex.cmo : snick_parse.cmi
+snick_lex.cmx : snick_parse.cmx
+snick_parse.cmo : snick_ast.cmi snick_parse.cmi
+snick_parse.cmx : snick_ast.cmx snick_parse.cmi
+snick_pprint.cmo : snick_ast.cmi snick_pprint.cmi
+snick_pprint.cmx : snick_ast.cmx snick_pprint.cmi
+snick.cmo : snick_pprint.cmi snick_parse.cmi snick_lex.cmo
+snick.cmx : snick_pprint.cmx snick_parse.cmx snick_lex.cmx

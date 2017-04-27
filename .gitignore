@@ -4,6 +4,7 @@
 *.cmx
 *.mli
 *.o
-snack
-calc
-test
+snick
+snick_lex.ml
+snick_parse.ml
+

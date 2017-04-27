@@ -1,12 +1,12 @@
 /*
-The parser for the snack. 
+The parser for the snick. 
 It defines 
 1.the token types for the Lexer 
 2.the parser rules that are used to generate AST
 */
 
 %{
-open Snack_ast
+open Snick_ast
 %}
 
 /*Variables*/
@@ -60,7 +60,7 @@ open Snack_ast
 %left MUL DIV     /*Higher precendence*/
 %nonassoc UMINUS  /*Highest precendence*/
 
-%type <Snack_ast.program> program
+%type <Snick_ast.program> program
 
 %start program
 %%
