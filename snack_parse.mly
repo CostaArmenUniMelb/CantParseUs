@@ -87,9 +87,13 @@ procedure_body:
 
 /*Parameters*/
 parameter_defs:
-  | parameter_def { [$1]  }
-  | parameter_defs COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
+  | parameter_defs_body { $1 }
   | { [] } /*allow blank parameter_def*/
+
+/*Parameters can be connected by comma*/
+parameter_defs_body:
+  | parameter_def { [$1] }
+  | parameter_defs_body COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
 
 parameter_def:
   | VAL type_def {(Value,$2)}
