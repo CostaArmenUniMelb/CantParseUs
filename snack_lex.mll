@@ -35,7 +35,7 @@ rule token = parse
   | '\n'      { Lexing.new_line lexbuf ; token lexbuf } (* Increment line number for error detection *)
 
   (* Variables *)
-  | '\"'[^  '\n']*'\"' as lxm  { STRING_CONST lxm }   (*don't allow new line in the string*)
+  | '\"'[^  '\n' '\t' '\"']*'\"' as lxm  { STRING_CONST lxm }   (*don't allow new line, tab, quotes in the string*)
   | '-'?digits as lxm  { INT_CONST(int_of_string lxm) }
   | '-'?(digit * ['.'])?digits as lxm  { FLOAT_CONST(float_of_string lxm) }
 
@@ -49,7 +49,6 @@ rule token = parse
   | "val" { VAL }
   | "read" { READ }
   | "write" { WRITE }
-  | ":=" { ASSIGN }
   | "and" { AND }
   | "or" { OR }
   | "do" { DO }
@@ -82,6 +81,7 @@ rule token = parse
   | '/' { DIV }
   | ';' { SEMICOLON }
   | ',' { COMMA }
+  | ":=" { ASSIGN }
 
   (*Indetifier*)
   | ident as lxm  { IDENT lxm } (*give the lower priorifor the identifier to make sure that it will match other symbols first*)
