@@ -9,12 +9,15 @@ open Snick_parse
 exception Lexer_error of string;;
 exception Parser_error of string;;
 
+(*For tracking number of comment lines for showing the correct line if there is an error*)
+let num_of_comment_lines = ref 0;;
+
 (* Show the error position*)
 let error_pos lexbuf = 
   let pos = Lexing.lexeme_start_p lexbuf in
   let col = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
   let token = Lexing.lexeme lexbuf in
-  Format.sprintf "Token:'%s', Line: %d, Column: %d" token pos.Lexing.pos_lnum col 
+  Format.sprintf "Token:'%s', Line: %d, Column: %d" token (pos.Lexing.pos_lnum + !num_of_comment_lines) col 
 
 (*Raise an error if any*)
 let raise_lexer_fail lexbuf =
@@ -35,8 +38,8 @@ let string = '\"'[^  '\n' '\t' '\"']*'\"'
 rule token = parse
   (* Escape chars *)
   [' ' '\t']    { token lexbuf }     (* skip blanks or tab *)
-  | '\n'      { Lexing.new_line lexbuf ; token lexbuf } (* Increment line number for error detection *)
-  | comment { token lexbuf }   (* skip comments *)
+  | '\n'      { Lexing.new_line lexbuf; token lexbuf } 
+  | comment { incr num_of_comment_lines; token lexbuf }   (* skip comment *)
 
   (* Variables *)
   | string as lxm  { STRING_CONST lxm }   (*don't allow new line, tab, quotes in the string*)
