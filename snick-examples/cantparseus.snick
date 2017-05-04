@@ -15,8 +15,8 @@ proc simple_declaration(val int input_1, val float input_2, val bool input_3)
 	assert_bool(input_3,c);
 
 	#int must be able to be assigned to float
-	b := a;
-	assert_float(input_2,a);
+	b := 20;
+	assert_float(20.0,b);
 
 end
 
@@ -103,7 +103,7 @@ proc do_while()
 	int j;
 
 	i := 0;
-	j := 0;
+	j := 1;
 
 	while i < 5 do
 		i := i+1;
@@ -154,6 +154,10 @@ proc main()
 	a:=3;
 	b:=2;
 
+	test_ref(a,b);
+	assert_int(4,b);
+	assert_int(12,a);
+
 	simple_declaration(2,3.5,true);
 	array_process();
 	math_operation();
@@ -161,12 +165,7 @@ proc main()
 	if_else();
 	do_while();
 	read_inputs();
-	test_ref(a,b);
-	assert_int(4,b);
-	assert_int(12,a);
-
 end
-
 
 # supportive procedures
 # the left parameter is the expected (correct) value and the second param is the actual result. both sould be exactly the same
