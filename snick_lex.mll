@@ -8,6 +8,7 @@ open Snick_parse
 (*Exception for error detection*)
 exception Lexer_error of string;;
 exception Parser_error of string;;
+exception Syntax_error of string;;
 
 (*For tracking number of comment lines for showing the correct line if there is an error*)
 let num_of_comment_lines = ref 0;;
@@ -25,7 +26,12 @@ let raise_lexer_fail lexbuf =
 
 let raise_parser_fail lexbuf =
   raise(Parser_error (error_pos lexbuf))
+
+let raise_syntax_fail lexbuf msg =
+  raise(Syntax_error ((error_pos lexbuf) ^ ", Detail: " ^ msg))
 }
+
+
 
 let digit = ['0' - '9']
 let alpha = ['a' - 'z' 'A' - 'Z']

@@ -7,6 +7,7 @@ It defines
 
 %{
 open Snick_ast
+open Snick_analyze
 %}
 
 /*Variables*/
@@ -69,7 +70,7 @@ open Snick_ast
 
 /*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures procedure_main procedures { List.append $3 ($2::$1) } 
+  | procedures procedure_main procedures { Snick_analyze.init; Snick_analyze.finalize (List.append $3 ($2::$1)) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
@@ -96,8 +97,8 @@ parameter_defs_body:
   | parameter_defs_body COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
 
 parameter_def:
-  | VAL type_def {(Value,$2)}
-  | REF type_def {(Reference,$2)}
+  | VAL type_def {(Value, $2, Expr_None)}
+  | REF type_def {(Reference, $2, Expr_None)}
 
 /*Declarations*/
 declerations :
@@ -105,7 +106,7 @@ declerations :
   | { [] } /*Declaration can be blank*/
 
 decleration :
-  | type_def SEMICOLON { $1 }
+  | type_def SEMICOLON { ($1, Expr_None) }
 
 type_def :
   | datatype IDENT {Single ($1,$2)}
@@ -158,25 +159,25 @@ exprs_nullable:
 
 /*Expression*/
 expr:
-  | BOOL_CONST { Ebool $1 }
-  | INT_CONST { Eint $1 }
-  | FLOAT_CONST { Efloat $1 }
-  | STRING_CONST { Estring $1 }
-  | lvalue { Elval $1 } 
+  | BOOL_CONST { Ebool ($1, Expr_Bool) }
+  | INT_CONST { Eint ($1, Expr_Int) }
+  | FLOAT_CONST { Efloat ($1, Expr_Float) }
+  | STRING_CONST { Estring ($1, Expr_String) }
+  | lvalue { Elval ($1, Expr_None) } 
 
-  | expr PLUS expr { Ebinop ($1, Op_add, $3) }
-  | expr MINUS expr { Ebinop ($1, Op_sub, $3) }
-  | expr MUL expr { Ebinop ($1, Op_mul, $3) }
-  | expr DIV expr { Ebinop ($1, Op_div, $3) }
-  | expr EQ expr { Ebinop ($1, Op_eq, $3) }
-  | expr NOTEQ expr { Ebinop ($1, Op_not_eq, $3) }
-  | expr LT expr { Ebinop ($1, Op_lt, $3) }
-  | expr GT expr { Ebinop ($1, Op_gt, $3) }
-  | expr LTEQ expr { Ebinop ($1, Op_lt_eq, $3) }
-  | expr GTEQ expr { Ebinop ($1, Op_gt_eq, $3) }
-  | expr AND expr { Ebinop ($1, Op_and, $3) }
-  | expr OR expr { Ebinop ($1, Op_or, $3) }
+  | expr PLUS expr { Ebinop ($1, Op_add, $3, Expr_None) }
+  | expr MINUS expr { Ebinop ($1, Op_sub, $3, Expr_None) }
+  | expr MUL expr { Ebinop ($1, Op_mul, $3, Expr_None) }
+  | expr DIV expr { Ebinop ($1, Op_div, $3, Expr_None) }
+  | expr EQ expr { Ebinop ($1, Op_eq, $3, Expr_None) }
+  | expr NOTEQ expr { Ebinop ($1, Op_not_eq, $3, Expr_None) }
+  | expr LT expr { Ebinop ($1, Op_lt, $3, Expr_None) }
+  | expr GT expr { Ebinop ($1, Op_gt, $3, Expr_None) }
+  | expr LTEQ expr { Ebinop ($1, Op_lt_eq, $3, Expr_None) }
+  | expr GTEQ expr { Ebinop ($1, Op_gt_eq, $3, Expr_None) }
+  | expr AND expr { Ebinop ($1, Op_and, $3, Expr_None) }
+  | expr OR expr { Ebinop ($1, Op_or, $3, Expr_None) }
 
-  | MINUS expr %prec UMINUS { Eunop (Op_minus, $2) }
-  | NOT expr  { Eunop (Op_not, $2) }
-  | LPAREN expr RPAREN { Eparens $2 }
+  | MINUS expr %prec UMINUS { Eunop (Op_minus, $2, Expr_None) }
+  | NOT expr  { Eunop (Op_not, $2, Expr_None) }
+  | LPAREN expr RPAREN { Eparens ($2, Expr_None) }

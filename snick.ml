@@ -1,4 +1,5 @@
 module P = Snick_parse
+open Snick_analyze
 
 (* Argument parsing code *)
 let infile_name = ref None
@@ -34,5 +35,6 @@ let main () =
     | Compile -> print_string ("Sorry, cannot generate code yet\n")
   with
     | Parsing.Parse_error -> Snick_lex.raise_parser_fail lexbuf 
+    | Snick_analyze.Syntax_error _ as err -> let msg = Printexc.to_string err in Snick_lex.raise_syntax_fail lexbuf msg
 
 let _ = main ()

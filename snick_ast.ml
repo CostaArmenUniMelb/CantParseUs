@@ -20,6 +20,14 @@ type datatype =
   | Bool
   | Int
   | Float
+
+(* possible types of an expression, used for syntax checking *)
+type expr_type =
+  | Expr_Bool
+  | Expr_Int
+  | Expr_Float
+  | Expr_String
+  | Expr_None
     
 (*Two variations of type declerations exist. 
 Array and non-array (single). Arrays require a list of
@@ -62,20 +70,20 @@ type lvalue =
 (*all expressions. includes basic data types, variable refs, 
 binary/unary expressions and expressions wrapped in parenthesis.*)
 and expr =
-  | Estring of string
-  | Ebool of bool
-  | Eint of int
-  | Efloat of float
-  | Elval of lvalue
-  | Ebinop of (expr * binop * expr)
-  | Eunop of (unop * expr)
-  | Eparens of expr
+  | Estring of (string * expr_type)
+  | Ebool of (bool * expr_type)
+  | Eint of (int * expr_type)
+  | Efloat of (float * expr_type)
+  | Elval of (lvalue * expr_type)
+  | Ebinop of (expr * binop * expr * expr_type)
+  | Eunop of (unop * expr * expr_type)
+  | Eparens of (expr * expr_type)
 
 (* right hand side (rhs) of assignment statement*)
 type rvalue =
   | Rexpr of expr
     
-type decleration = type_def
+type decleration = (type_def * expr_type)
   
 (*all statements in procedure body. Atomic statements such as 
 Assignments, read/write, procedure invocations, and, 
@@ -104,10 +112,11 @@ type passby = | Value | Reference
   
 (*param definition (i.e. 'ref int paramName1') in procedure 
 definitions*)
-type parameter_def = (passby * type_def)
+type parameter_def = (passby * type_def * expr_type)
   
 (*entire procedure including its definition and content*)
 type procedure = (identifier * parameter_def list * procedure_body)
   
 (*an entire program is a sequence of procedures*)
 type program = procedure list
+

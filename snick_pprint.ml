@@ -114,10 +114,10 @@ let format_bool bool =
 let rec try_get_binop expression = 
   match expression with
     | Ebinop(ebinop) -> 
-      let (_, binop, _) = ebinop
+      let (_, binop, _,_) = ebinop
      	in
       Some binop
-    | Eparens(expr) -> try_get_binop expr
+    | Eparens(expr,expr_type) -> try_get_binop expr
     | _ -> None
           
 (*determines if the RHS or LHS child expression requires parenthesis based on the operators 
@@ -158,13 +158,13 @@ let rec format_lvalue lval =
 (*formats a single expression*)
 and format_expression expression =
   match expression with
-    | Estring(s) -> s
-    | Ebool(b) -> format_bool b
-    | Eint(i) -> string_of_int i
-    | Efloat(f) -> string_of_float f
-    | Elval(lval) -> format_lvalue lval
+    | Estring(s) -> let (s, _ ) = s in s
+    | Ebool(b) -> let (b, _ ) = b in format_bool b
+    | Eint(i) -> let (i, _ ) = i in string_of_int i
+    | Efloat(f) -> let (f, _ ) = f in  string_of_float f
+    | Elval(lval) -> let (lval, _ ) = lval in format_lvalue lval
     | Ebinop(ebinop) -> 
-      let (expression1, binop, expression2) = ebinop
+      let (expression1, binop, expression2,_) = ebinop
       in 
       let formatted_expression1 =
         match (requires_parenthesis binop expression1 true) with
@@ -179,10 +179,10 @@ and format_expression expression =
       (formatted_expression1)^" "^ (format_binop binop)^" "^formatted_expression2
           
     | Eunop(eunop) -> 
-      let (unaryop, expression) = eunop
+      let (unaryop, expression, expr_type) = eunop
       in
       (format_unop unaryop) ^ (format_expression expression)
-    | Eparens(expression) -> format_expression expression
+    | Eparens(expression,expr_type) -> format_expression expression
 
 (*formats a list of expressions for use in array access and proc invocation 
 hence the comma delimiting (reduce function)*)
@@ -195,7 +195,7 @@ let format_rvalue rval =
       
 (*formats a decleration (typedef) by adding indentation and a semicolon to terminate the 
 atomic statement*)
-let format_decl indent_num typedef = (indent indent_num) ^ format_typedef typedef ^ ";"
+let format_decl indent_num decl = let (typedef , expr_type) = decl in (indent indent_num) ^ format_typedef typedef ^ ";"
   
 (*formats a decleration list and delimits them by an endline character*)
 let format_decleration_list indent_num list = 
@@ -260,7 +260,7 @@ let format_passby passby =
 (*formats parametereter in procedure definition.
 i.e. format_parameter (Value,(Bool,"ExampleName")) -> 'val bool ExampleName' *)
 let format_parameter parameter =
-  let (passby, typedef) = parameter
+  let (passby, typedef , expr_type) = parameter
   in
   (format_passby passby) ^ " " ^ (format_typedef typedef)
     
