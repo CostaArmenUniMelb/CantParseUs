@@ -53,7 +53,7 @@ proc math_operation()
 
 	#ordering
 	assert_int(3+4*2,11);
-	assert_int(3- 4*2,-2);
+	assert_int(3- 4*2,-5);
 
 end
 
