@@ -18,7 +18,8 @@ let error_pos lexbuf =
   let pos = Lexing.lexeme_start_p lexbuf in
   let col = pos.Lexing.pos_cnum - pos.Lexing.pos_bol in
   let token = Lexing.lexeme lexbuf in
-  Format.sprintf "Token:'%s', Line: %d, Column: %d" token (pos.Lexing.pos_lnum + !num_of_comment_lines) col 
+  Format.sprintf "Token or Before Token:'%s', Line: %d, Column: %d" 
+                  token (pos.Lexing.pos_lnum + !num_of_comment_lines) col 
 
 (*Raise an error if any*)
 let raise_lexer_fail lexbuf =
@@ -73,7 +74,7 @@ rule token = parse
   | "else" { ELSE }
   | "fi" { FI }
   | "proc" { PROC }
-  | "main" { MAIN }
+  (*| "main" { MAIN }*)
   | "end" { END }
 
   (*Symbols*)

@@ -70,18 +70,14 @@ open Snick_analyze
 
 /*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures procedure_main procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog (List.append $3 ($2::$1)) } 
+  | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ($1) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
-  | { [] }
+  | procedure { [$1] }
 
 procedure:
   | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END {($2,List.rev $4,$6)}
-
-/*Procedure "main" are parameterless*/
-procedure_main:
-  | PROC MAIN LPAREN RPAREN procedure_body END { ("main", [] ,$5) }
 
 procedure_body:
   | declerations statements { (List.rev $1, List.rev $2) }
