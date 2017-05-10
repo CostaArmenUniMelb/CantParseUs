@@ -66,14 +66,14 @@ type op_type =
   | Op_type_math_to_bool  
 
 (*tbl_type define the symbol table that will be used for insert and add
-Main is used for storing all procedures and details
+Proc is used for storing all procedures and details
 Invoke is  for storing all invoked procedures and parameters
 Current is for storeing all parameters in a procedure. It will use the current procedure name 
   as the real name and changes everytime the parser reads a new procedure *)
 type tbl_type=
-  |Main
-  |Invoke
-  |Current
+  | Proc
+  | Invoke
+  | Current
 
     
 (*Left hand side of an assignment (variables

@@ -36,6 +36,20 @@ let expr_type_tostring expr_type=
 	  | Expr_None -> "None"
 ;;
 
+let get_expr_type_for_datatype datatype =
+	match datatype with
+		| Bool -> Expr_Bool
+	  	| Int -> Expr_Int
+	  	| Float -> Expr_String
+;;
+
+let get_expr_type_for_typedef typedef =
+	match typedef with
+		|Single (datatype,id) -> get_expr_type_for_datatype datatype
+		|Array (datatype,id,ranges) -> get_expr_type_for_datatype datatype
+
+;;
+
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
@@ -96,9 +110,9 @@ let current_tblname = "";;
 
 let get_tblname tbl_type =
 	match tbl_type with
-	  |Main -> "main"
-	  |Invoke -> "invoke"
-	  |Current -> current_tblname
+	  | Proc -> "-__proc__-"
+	  | Invoke -> "-__invoke__-"
+	  | Current -> current_tblname
 ;;
 
 let add_tbl tbl_type =
@@ -131,6 +145,23 @@ let finalize_prog prog =
 	prog;
 ;;
 
+let check_proc proc =
+	proc;
+;;
+
+let check_assign assign =
+	(* similar to  check_expr_op but a little simpler*)
+	assign;
+;;
+
+let check_invoke invoke =
+	invoke;
+;;
+
+let check_lvalue lvalue =
+	lvalue;
+;;
+
 (* Check if the expr has the type bool, used in IF and While *)
 let check_expr_bool expr  =
 	if get_expr_type expr != Expr_Bool then
@@ -141,9 +172,9 @@ let check_expr_bool expr  =
 (* check and assign expr type for Ebinop operations *)
 let check_expr_op expr  =
 	let Ebinop (expr1,op,expr2,expr_type) = expr in
-	let expr_type_final = ref Expr_Float in (* for assigning the expr_type for the parent expr*)
+	let expr_type_final = ref Expr_None in (* for assigning the expr_type for the parent expr*)
 	match get_op_type op with
-		|Op_type_math | Op_type_math_to_bool -> 
+		| Op_type_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
 			if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
 			|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
@@ -173,7 +204,7 @@ let check_expr_op expr  =
 					expr_type_final := Expr_Bool;
 			;
 
-		|Op_type_bool -> 
+		| Op_type_bool -> 
 			if get_expr_type expr1 != Expr_Bool || get_expr_type expr2 != Expr_Bool then
 				raise_type_mismatch expr1 expr2;
 			expr_type_final := Expr_Bool;
@@ -181,12 +212,12 @@ let check_expr_op expr  =
 
 	debugmsg ("Type =" ^ (expr_type_tostring !expr_type_final) );
 	Ebinop (expr1,op,expr2,!expr_type_final);
-	;;
+;;
 
 (* check whether the array size is valid when define*)
 let check_typedef_range ttypedef =
  	match ttypedef with
-		| Array(datatype,identifier,range_list) -> 
+		| Array (datatype,identifier,range_list) -> 
 			for i = 0 to List.length(range_list) -1  do 
 				let range =(List.nth range_list i)in
 				let (min,max) = range in
@@ -197,8 +228,26 @@ let check_typedef_range ttypedef =
 			
 		| _ -> debugmsg "Not an array\n"; 
 		;
-		ttypedef;
-	;;
+	ttypedef;
+;;
+
+(* The differences between dec and param is 
+the params can be REF or VAL while the dec is only VAL *)
+let check_param param =
+	let (reftype, typedef,expr_type) =param in
+	(* check_typedef_range(typedef);  no chance tat param will be an array*)
+	(* save to symbol table*)
+	(reftype, typedef, get_expr_type_for_typedef typedef);
+;;
+
+let check_dec dec =
+	let (typedef,expr_type) =dec in
+	let expr_type_final = ref Expr_None in
+
+	check_typedef_range(typedef);
+	(* save to symbol table*)
+	(typedef,get_expr_type_for_typedef typedef);
+;;
 
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
 let assign_expr_unop eunop =
