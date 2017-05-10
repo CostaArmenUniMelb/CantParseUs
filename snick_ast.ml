@@ -55,6 +55,10 @@ type binop =
 type unop =
   | Op_minus
   | Op_not
+
+type op_type =
+  | Op_type_math
+  | Op_type_bool
     
 (*Left hand side of an assignment (variables
 and array elements can be assigned to). Note that an 

@@ -70,7 +70,7 @@ open Snick_analyze
 
 /*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures procedure_main procedures { Snick_analyze.init_prog; Snick_analyze.finalize (List.append $3 ($2::$1)) } 
+  | procedures procedure_main procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog (List.append $3 ($2::$1)) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
@@ -165,19 +165,19 @@ expr:
   | STRING_CONST { Estring ($1, Expr_String) }
   | lvalue { Elval ($1, Expr_None) } 
 
-  | expr PLUS expr { Ebinop ($1, Op_add, $3, Expr_None) }
-  | expr MINUS expr { Ebinop ($1, Op_sub, $3, Expr_None) }
-  | expr MUL expr { Ebinop ($1, Op_mul, $3, Expr_None) }
-  | expr DIV expr { Ebinop ($1, Op_div, $3, Expr_None) }
-  | expr EQ expr { Ebinop ($1, Op_eq, $3, Expr_None) }
-  | expr NOTEQ expr { Ebinop ($1, Op_not_eq, $3, Expr_None) }
-  | expr LT expr { Ebinop ($1, Op_lt, $3, Expr_None) }
-  | expr GT expr { Ebinop ($1, Op_gt, $3, Expr_None) }
-  | expr LTEQ expr { Ebinop ($1, Op_lt_eq, $3, Expr_None) }
-  | expr GTEQ expr { Ebinop ($1, Op_gt_eq, $3, Expr_None) }
-  | expr AND expr { Ebinop ($1, Op_and, $3, Expr_None) }
-  | expr OR expr { Ebinop ($1, Op_or, $3, Expr_None) }
+  | expr PLUS expr {Snick_analyze.check_expr (Ebinop ($1, Op_add, $3, Expr_None)) }
+  | expr MINUS expr { Snick_analyze.check_expr (Ebinop ($1, Op_sub, $3, Expr_None))  }
+  | expr MUL expr { Snick_analyze.check_expr (Ebinop ($1, Op_mul, $3, Expr_None))  }
+  | expr DIV expr { Snick_analyze.check_expr (Ebinop ($1, Op_div, $3, Expr_None))  }
+  | expr EQ expr { Snick_analyze.check_expr (Ebinop ($1, Op_eq, $3, Expr_None))  }
+  | expr NOTEQ expr { Snick_analyze.check_expr (Ebinop ($1, Op_not_eq, $3, Expr_None))  }
+  | expr LT expr { Snick_analyze.check_expr (Ebinop ($1, Op_lt, $3, Expr_None))  }
+  | expr GT expr { Snick_analyze.check_expr (Ebinop ($1, Op_gt, $3, Expr_None))  }
+  | expr LTEQ expr { Snick_analyze.check_expr (Ebinop ($1, Op_lt_eq, $3, Expr_None))  }
+  | expr GTEQ expr { Snick_analyze.check_expr (Ebinop ($1, Op_gt_eq, $3, Expr_None) ) }
+  | expr AND expr { Snick_analyze.check_expr (Ebinop ($1, Op_and, $3, Expr_None))  }
+  | expr OR expr { Snick_analyze.check_expr (Ebinop ($1, Op_or, $3, Expr_None))  }
 
-  | MINUS expr %prec UMINUS { Eunop (Op_minus, $2, Expr_None) }
-  | NOT expr  { Eunop (Op_not, $2, Expr_None) }
-  | LPAREN expr RPAREN { Eparens ($2, Expr_None) }
+  | MINUS expr %prec UMINUS { Snick_analyze.assign_expr_unop (Eunop (Op_minus, $2, Expr_None)) }
+  | NOT expr  { Snick_analyze.assign_expr_unop (Eunop (Op_not, $2, Expr_None)) }
+  | LPAREN expr RPAREN { Snick_analyze.assign_expr_paren (Eparens ($2, Expr_None)) }
