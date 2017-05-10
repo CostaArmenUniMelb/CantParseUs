@@ -1,4 +1,4 @@
-proc logical(val int myval[334..555])
+proc logical(val int myval)
 
 	a:=- 99;
 

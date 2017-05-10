@@ -70,17 +70,17 @@ open Snick_analyze
 
 /*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ($1) } 
+  | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ( $1 ) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
   | procedure { [$1] }
 
 procedure:
-  | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END { Snick_analyze.check_proc($2,List.rev $4,$6)}
+  | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END { Snick_analyze.check_proc ( $2, List.rev $4, $6 ) }
 
 procedure_body:
-  | declerations statements { (List.rev $1, List.rev $2) }
+  | declerations statements { ( List.rev $1, List.rev $2 ) }
 
 /*Parameters*/
 parameter_defs:
@@ -93,8 +93,8 @@ parameter_defs_body:
   | parameter_defs_body COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
 
 parameter_def:
-  | VAL type_def {Snick_analyze.check_param(Value, $2, Expr_None)}
-  | REF type_def {Snick_analyze.check_param(Reference, $2, Expr_None)}
+  | VAL type_def_single_only { Snick_analyze.check_param ( Value, $2, Expr_None ) }
+  | REF type_def_single_only { Snick_analyze.check_param ( Reference, $2, Expr_None ) }
 
 /*Declarations*/
 declerations :
@@ -108,14 +108,18 @@ type_def :
   | datatype IDENT {Single ($1,$2)}
   | datatype IDENT LBRACK ranges RBRACK {Array ($1, $2, $4)}
 
+/*Parameter can be declared as Single only*/
+type_def_single_only :
+  | datatype IDENT {Single ($1,$2)}
+
 datatype:
   | BOOL { Bool }
   | INT { Int }
   | FLOAT { Float }
 
 ranges:
-  |  ranges COMMA range  { $3 :: $1 }
-  |  range  { [$1] }
+  | ranges COMMA range  { $3 :: $1 }
+  | range  { [$1] }
  
 range:
   | INT_CONST DDOT INT_CONST  { ($1, $3) }
@@ -129,29 +133,29 @@ statements:
 statement:
   | READ lvalue SEMICOLON { Read $2 }
   | WRITE expr SEMICOLON { Write $2 }
-  | lvalue ASSIGN rvalue SEMICOLON {  Snick_analyze.check_assign ( Assign ($1, $3)) }
-  | IDENT LPAREN exprs_nullable RPAREN SEMICOLON {  Snick_analyze.check_invoke ( InvokeProc($1, List.rev $3) ) } /* Invoke procedure*/
+  | lvalue ASSIGN rvalue SEMICOLON { Snick_analyze.check_assign ( Assign ($1, $3) ) }
+  | IDENT LPAREN exprs_nullable RPAREN SEMICOLON { Snick_analyze.check_invoke ( InvokeProc ($1, List.rev $3) ) } /* Invoke procedure*/
   | IF expr THEN statements FI { IfThen( Snick_analyze.check_expr_bool ($2), List.rev $4) }
-  | IF expr THEN statements ELSE statements FI {IfThenElse(Snick_analyze.check_expr_bool ($2), List.rev $4,List.rev $6) }
-  | WHILE expr DO statements OD { WhileDo(Snick_analyze.check_expr_bool ($2), List.rev $4) }
+  | IF expr THEN statements ELSE statements FI { IfThenElse ( Snick_analyze.check_expr_bool ($2), List.rev $4, List.rev $6) }
+  | WHILE expr DO statements OD { WhileDo ( Snick_analyze.check_expr_bool ($2), List.rev $4) }
 
 rvalue :
   | expr { Rexpr $1 }
 
 lvalue:
-  | IDENT { Snick_analyze.check_lvalue (LId $1) }
-  | IDENT LBRACK exprs RBRACK  { Snick_analyze.check_lvalue (LArrayElement( $1, List.rev $3)) }
+  | IDENT { Snick_analyze.check_lvalue ( LId $1 ) }
+  | IDENT LBRACK exprs RBRACK  { Snick_analyze.check_lvalue ( LArrayElement ( $1, List.rev $3) ) }
 
 /*Expressions*/
 /*Multiple expressions connected by ","*/
 exprs:
-  |expr { [$1]  }
-  |exprs COMMA expr { $3 :: $1 }
+  | expr { [$1]  }
+  | exprs COMMA expr { $3 :: $1 }
 
 /* Allow Expression to be blank, used for invoking a function */
 exprs_nullable: 
-  |exprs { $1  }
-  |{ [] }
+  | exprs { $1  }
+  | { [] }
 
 /*Expression*/
 expr:
