@@ -171,47 +171,49 @@ let check_expr_bool expr  =
 
 (* check and assign expr type for Ebinop operations *)
 let check_expr_op expr  =
-	let Ebinop (expr1,op,expr2,expr_type) = expr in
-	let expr_type_final = ref Expr_None in (* for assigning the expr_type for the parent expr*)
-	match get_op_type op with
-		| Op_type_math | Op_type_math_to_bool -> 
-			(* Check if they are int or float, if not then thow the error *)
-			if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
-			|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
-				raise_type_mismatch expr1 expr2;
-(* 			(* If strict, not allow assigning float to in (strict should be true for Assigning only) *)
-			if strict && (get_expr_type expr1 == Expr_Int && get_expr_type expr1 == Expr_Float) then 
-				raise(Syntax_error (sprintf "Type mismatch" )); *)
-			(* Check divide by zero *)
-			if op == Op_div then
-				match expr2 with
-				  | Eint (int, expr_type)-> if int == 0 then raise_zero_division "";
-				  | Efloat (float, expr_type)-> if float == 0.0 then raise_zero_division "";
-				  | _ -> ();
-	  		;
+	match expr with
+	| Ebinop (expr1,op,expr2,expr_type) -> 
+		let expr_type_final = ref Expr_None in (* for assigning the expr_type for the parent expr*)
+		match get_op_type op with
+			| Op_type_math | Op_type_math_to_bool -> 
+				(* Check if they are int or float, if not then thow the error *)
+				if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
+				|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
+					raise_type_mismatch expr1 expr2;
+	(* 			(* If strict, not allow assigning float to in (strict should be true for Assigning only) *)
+				if strict && (get_expr_type expr1 == Expr_Int && get_expr_type expr1 == Expr_Float) then 
+					raise(Syntax_error (sprintf "Type mismatch" )); *)
+				(* Check divide by zero *)
+				if op == Op_div then
+					match expr2 with
+					  | Eint (int, expr_type)-> if int == 0 then raise_zero_division "";
+					  | Efloat (float, expr_type)-> if float == 0.0 then raise_zero_division "";
+					  | _ -> ();
+		  		;
 
-	  		(* set the expr type for the parent expr*)
-	  		match get_op_type op with
-		  		|Op_type_math ->
-					(* Set the expr type, if any is float then the parent is also float *)
-					if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then
-						expr_type_final :=  Expr_Float
-					else
-						expr_type_final := Expr_Int
-					;
-				|Op_type_math_to_bool ->
-					(* for some operations such as lt ,gt the result must be bool*)
-					expr_type_final := Expr_Bool;
+		  		(* set the expr type for the parent expr*)
+		  		match get_op_type op with
+			  		|Op_type_math ->
+						(* Set the expr type, if any is float then the parent is also float *)
+						if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then
+							expr_type_final :=  Expr_Float
+						else
+							expr_type_final := Expr_Int
+						;
+					|Op_type_math_to_bool ->
+						(* for some operations such as lt ,gt the result must be bool*)
+						expr_type_final := Expr_Bool;
+					|_ -> ();
+				;
+
+			| Op_type_bool -> 
+				if get_expr_type expr1 != Expr_Bool || get_expr_type expr2 != Expr_Bool then
+					raise_type_mismatch expr1 expr2;
+				expr_type_final := Expr_Bool;
 			;
-
-		| Op_type_bool -> 
-			if get_expr_type expr1 != Expr_Bool || get_expr_type expr2 != Expr_Bool then
-				raise_type_mismatch expr1 expr2;
-			expr_type_final := Expr_Bool;
-		;
-
-	debugmsg ("Type =" ^ (expr_type_tostring !expr_type_final) );
-	Ebinop (expr1,op,expr2,!expr_type_final);
+		debugmsg ("Type =" ^ (expr_type_tostring !expr_type_final) );
+		Ebinop (expr1,op,expr2,!expr_type_final);
+	| _ -> expr;
 ;;
 
 (* check whether the array size is valid when define*)
@@ -228,7 +230,6 @@ let check_typedef_range ttypedef =
 			
 		| _ -> debugmsg "Not an array\n"; 
 		;
-	ttypedef;
 ;;
 
 (* The differences between dec and param is 
@@ -242,7 +243,6 @@ let check_param param =
 
 let check_dec dec =
 	let (typedef,expr_type) =dec in
-	let expr_type_final = ref Expr_None in
 
 	check_typedef_range(typedef);
 	(* save to symbol table*)
@@ -251,14 +251,15 @@ let check_dec dec =
 
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
 let assign_expr_unop eunop =
-	let Eunop (op,expr,expr_type) = eunop in
-	Eunop (op,expr,get_expr_type expr);
+	match eunop with
+	 | Eunop (op,expr,expr_type) -> Eunop (op,expr,get_expr_type expr);
+	 | _ -> eunop ;
 ;;
 
 let assign_expr_paren eparen =
-	let Eparens (expr,expr_type) = eparen in
-	expr_type = get_expr_type expr;
-	Eparens (expr,get_expr_type expr);
+	match eparen with
+	| Eparens (expr,expr_type) -> Eparens (expr,get_expr_type expr);
+	| _ -> eparen ;
 ;;
 
 (* ----END Functions for parser----*)
