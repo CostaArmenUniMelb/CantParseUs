@@ -25,6 +25,7 @@ proc logical()
 		a:=2 - (3+4);
 		a:=2 - (3 - 4);
 
+
         a:=(2*3)*4;
 		a:=(2*3)/4;
 		a:=(2*3)+4;
@@ -43,6 +44,7 @@ proc logical()
 		a:=(2 - 3) - 4;
 		a:=(2 - 3.7) - 4;
 		a:= true or false;
+		a:=2 < (3 - 4);
 
         #Need to omit all prenthesis
         a:=(a and b) and c;

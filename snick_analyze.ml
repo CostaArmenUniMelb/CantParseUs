@@ -10,7 +10,7 @@ let debugging = true;;
 let debugmsg msg = 
 	if debugging then 
 		print_string msg;
-	;;
+;;
 
 let get_expr_type expr =
 	match expr with
@@ -22,7 +22,7 @@ let get_expr_type expr =
 	  | Ebinop (expr1, binop, expr2, expr_type)-> expr_type
 	  | Eunop (unop, expr, expr_type)-> expr_type
 	  | Eparens (expr, expr_type)-> expr_type
-	;;
+;;
 
 (* Convert the expression type to string. For raise error and debugging only *)
 let expr_type_tostring expr_type=
@@ -32,7 +32,7 @@ let expr_type_tostring expr_type=
 	  | Expr_Float -> "Float"
 	  | Expr_String -> "String"
 	  | Expr_None -> "None"
-	 ;;
+;;
 
 
 let raise_type_mismatch expr1 expr2 = 
@@ -64,14 +64,19 @@ let raise_zero_division dummy =
 	raise(Syntax_error (sprintf "Cannot divide by zero"));
 ;;
 
+let raise_expect_bool expr =
+	raise(Syntax_error (sprintf "The expected expression type must be boolean 
+						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
+;;
 
 
 let get_op_type op =
 	match op with
 		(* Math operation *)
-		|Op_add| Op_sub|Op_mul|Op_div |Op_lt|Op_gt|Op_lt_eq|Op_gt_eq-> Op_type_math
+		|Op_add| Op_sub|Op_mul|Op_div -> Op_type_math
+		|Op_lt|Op_gt|Op_lt_eq|Op_gt_eq-> Op_type_math_to_bool
 		|Op_and|Op_or|Op_eq |Op_not_eq -> Op_type_bool
-	;;
+;;
 
 (* let get_op_type op =
 	match op with
@@ -82,20 +87,27 @@ let get_op_type op =
 
 let init_prog =
 	 debugmsg "Initiated";
-	;; 
+;; 
 
 
 let finalize_prog prog =
 	debugmsg "Finalized"; 
 	prog;
-	;;
+;;
 
+(* Check if the expr has the type bool, used in IF and While *)
+let check_expr_bool expr  =
+	if  get_expr_type expr != Expr_Bool then
+		raise_expect_bool expr;
+	expr;
+;;
 
-let check_expr expr  =
+(* check and assign expr type for Ebinop operations *)
+let check_expr_op expr  =
 	let Ebinop (expr1,op,expr2,expr_type) = expr in
 	let expr_type_final = ref Expr_Float in
 	match get_op_type op with
-		|Op_type_math -> 
+		|Op_type_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
 			if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
 			|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
@@ -111,12 +123,18 @@ let check_expr expr  =
 				  | _ -> ();
 	  		;
 
-
-			(* Set the expr type *)
-			if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then
-				expr_type_final :=  Expr_Float
-			else
-				expr_type_final := Expr_Int
+	  		(* set the expr type for the parent expr*)
+	  		match get_op_type op with
+		  		|Op_type_math ->
+					(* Set the expr type, if any is float then the parent is also float *)
+					if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then
+						expr_type_final :=  Expr_Float
+					else
+						expr_type_final := Expr_Int
+					;
+				|Op_type_math_to_bool ->
+					(* for some operations such as lt ,gt the result must be bool*)
+					expr_type_final := Expr_Bool;
 			;
 
 		|Op_type_bool -> 
@@ -129,6 +147,7 @@ let check_expr expr  =
 	Ebinop (expr1,op,expr2,!expr_type_final);
 	;;
 
+(* check whether the array size is valid when define*)
 let check_typedef_range ttypedef =
  	match ttypedef with
 		| Array(datatype,identifier,range_list) -> 
@@ -145,7 +164,7 @@ let check_typedef_range ttypedef =
 		ttypedef;
 	;;
 
-(* Assign expr_type for Eunop, just get the value from chile and put to parent*)
+(* Assign expr_type for Eunop, just get the value from child and put to parent*)
 let assign_expr_unop eunop =
 	let Eunop (op,expr,expr_type) = eunop in
 	Eunop (op,expr,get_expr_type expr);

@@ -19,18 +19,18 @@ let _ =
 	let exp1 = Eint ( 5, Expr_Int) in
 	let exp2 = Eint ( 20, Expr_Int) in
 	let exp_parent = Ebinop (exp1, Op_add, exp2, Expr_None) in
-	Snick_analyze.check_expr_type_match exp_parent false;;
+	Snick_analyze.check_expr_op exp_parent ;;
 
 	let exp1 = Efloat ( 5.0, Expr_Float) in
 	let exp2 = Eint ( 20, Expr_Int) in
 	let exp_parent =  Ebinop (exp1, Op_add, exp2, Expr_None) in
-	Snick_analyze.check_expr_type_match exp_parent false;;
+	Snick_analyze.check_expr_op exp_parent ;;
 
 	try  
 		let exp1 = Ebool ( true, Expr_Bool) in
 		let exp2 = Eint ( 20, Expr_Int) in
 		let exp_parent =  Ebinop(exp1, Op_add, exp2, Expr_None) in
-		Snick_analyze.check_expr_type_match exp_parent false;
+		Snick_analyze.check_expr_op exp_parent ;
 		();
 	with
 		| _ as err -> let msg = Printexc.to_string err in print_string msg; 
