@@ -70,7 +70,7 @@ open Snick_analyze
 
 /*Program is the top most rule, program must contains exactly on "main" procedure*/
 program:
-  | procedures procedure_main procedures { Snick_analyze.init; Snick_analyze.finalize (List.append $3 ($2::$1)) } 
+  | procedures procedure_main procedures { Snick_analyze.init_prog; Snick_analyze.finalize (List.append $3 ($2::$1)) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
@@ -106,7 +106,7 @@ declerations :
   | { [] } /*Declaration can be blank*/
 
 decleration :
-  | type_def SEMICOLON { ($1, Expr_None) }
+  | type_def SEMICOLON { (Snick_analyze.check_typedef_range($1), Expr_None) }
 
 type_def :
   | datatype IDENT {Single ($1,$2)}

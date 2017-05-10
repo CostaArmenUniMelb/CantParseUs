@@ -1,0 +1,20 @@
+proc main()
+
+    bool a[-3..8];
+    bool a[1..8,5..6];
+    float a[1..8,5..6];
+
+    a:=4;
+    a[2]:=4;
+    a[2,3, 5+4,not 4]:=4;
+ 
+end
+
+
+proc invoke_a_function( val int n, ref float out)
+
+    fib(n - 2, f1);
+    fib();
+    fib(a[2]);
+ 
+end
