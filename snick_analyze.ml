@@ -3,6 +3,7 @@ open Snick_ast
 
 exception Syntax_error of string;;
 
+(* ----Debugging---- *)
 let debugging = true;;
 
 (* Show  some messages for debugging *)
@@ -10,7 +11,9 @@ let debugmsg msg =
 	if debugging then 
 		print_string msg;
 ;;
+(* ----END Debugging---- *)
 
+(* ----Type management---- *)
 let get_expr_type expr =
 	match expr with
 	  | Estring (string, expr_type)-> expr_type
@@ -36,12 +39,13 @@ let expr_type_tostring expr_type=
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
-		|Op_add| Op_sub|Op_mul|Op_div -> Op_type_math
-		|Op_lt|Op_gt|Op_lt_eq|Op_gt_eq-> Op_type_math_to_bool
-		|Op_and|Op_or|Op_eq |Op_not_eq -> Op_type_bool
+		|Op_add | Op_sub |Op_mul |Op_div -> Op_type_math
+		|Op_lt |Op_gt |Op_lt_eq |Op_gt_eq-> Op_type_math_to_bool
+		|Op_and |Op_or |Op_eq |Op_not_eq -> Op_type_bool
 ;;
+(* ----END Type management---- *)
 
-(* Error raising*)
+(* ----Error raising----*)
 let raise_type_mismatch expr1 expr2 = 
 	raise(Syntax_error (sprintf "Type mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type expr1))
@@ -83,9 +87,39 @@ let raise_no_main dummy =
 let raise_main_mustnothave_params dummy =
 	raise(Syntax_error (sprintf "The 'main' procedure must not contain any parameters"));
 ;;
-(* End Error raising*)
+(* ----END Error raising----*)
 
+(* ----Symbol table management----*)
+(*For keeping the current parsing procedure name (we define current_tblname = procedure name)*)
+(*It changes every time we read a new procedure*)
+let current_tblname = "";;
 
+let get_tblname tbl_type =
+	match tbl_type with
+	  |Main -> "main"
+	  |Invoke -> "invoke"
+	  |Current -> current_tblname
+;;
+
+let add_tbl tbl_type =
+	();
+;;
+
+let insert_symbol tbl_type id obj =
+	();
+;;
+
+let check_exist tbl_type id =
+	();
+;;
+
+let check_not_exist tbl_type id =
+	();
+;;
+
+(* ----END Symbol table management----*)
+
+(* ----Functions for parser----*)
 (* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
 	 debugmsg "Initiated";
@@ -177,4 +211,6 @@ let assign_expr_paren eparen =
 	expr_type = get_expr_type expr;
 	Eparens (expr,get_expr_type expr);
 ;;
+
+(* ----END Functions for parser----*)
 
