@@ -5,6 +5,7 @@ exception Syntax_error of string;;
 
 let debugging = true;;
 
+
 (* Show  some messages if debugging *)
 let debugmsg msg = 
 	if debugging then 
@@ -46,6 +47,25 @@ let raise_invalid_arraysize min max =
 	raise(Syntax_error (sprintf "Invalid Array Size: %d and %d" min max));
 ;;
 
+let raise_out_of_bound min max index=
+	raise(Syntax_error (sprintf "Index out of bound, possible values is %d and %d 
+						but the index is %d" min max index));
+;;
+
+let raise_not_exist id =
+	raise(Syntax_error (sprintf "'%s' does not exist" id));
+;;
+
+let raise_already_exist id =
+	raise(Syntax_error (sprintf "'%s' has been declared" id));
+;;
+
+let raise_zero_division dummy =
+	raise(Syntax_error (sprintf "Cannot divide by zero"));
+;;
+
+
+
 let get_op_type op =
 	match op with
 		(* Math operation *)
@@ -83,6 +103,14 @@ let check_expr expr  =
 (* 			(* If strict, not allow assigning float to in (strict should be true for Assigning only) *)
 			if strict && (get_expr_type expr1 == Expr_Int && get_expr_type expr1 == Expr_Float) then 
 				raise(Syntax_error (sprintf "Type mismatch" )); *)
+			(* Check divide by zero *)
+			if op == Op_div then
+				match expr2 with
+				  | Eint (int, expr_type)-> if int == 0 then raise_zero_division "";
+				  | Efloat (float, expr_type)-> if float == 0.0 then raise_zero_division "";
+				  | _ -> ();
+	  		;
+
 
 			(* Set the expr type *)
 			if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then

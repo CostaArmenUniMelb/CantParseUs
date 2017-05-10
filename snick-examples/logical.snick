@@ -7,6 +7,7 @@ proc logical()
     if 30>40then
     	a:=- 99;
     	#Test all possibilities
+    	a:=2*(3*4);
 		a:=2*(3*4);
 		a:=2*(3/4);
 		a:=2*(3+4);
