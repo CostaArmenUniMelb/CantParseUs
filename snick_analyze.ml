@@ -5,8 +5,7 @@ exception Syntax_error of string;;
 
 let debugging = true;;
 
-
-(* Show  some messages if debugging *)
+(* Show  some messages for debugging *)
 let debugmsg msg = 
 	if debugging then 
 		print_string msg;
@@ -34,7 +33,15 @@ let expr_type_tostring expr_type=
 	  | Expr_None -> "None"
 ;;
 
+(* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
+let get_op_type op =
+	match op with
+		|Op_add| Op_sub|Op_mul|Op_div -> Op_type_math
+		|Op_lt|Op_gt|Op_lt_eq|Op_gt_eq-> Op_type_math_to_bool
+		|Op_and|Op_or|Op_eq |Op_not_eq -> Op_type_bool
+;;
 
+(* Error raising*)
 let raise_type_mismatch expr1 expr2 = 
 	raise(Syntax_error (sprintf "Type mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type expr1))
@@ -69,27 +76,22 @@ let raise_expect_bool expr =
 						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
 ;;
 
-
-let get_op_type op =
-	match op with
-		(* Math operation *)
-		|Op_add| Op_sub|Op_mul|Op_div -> Op_type_math
-		|Op_lt|Op_gt|Op_lt_eq|Op_gt_eq-> Op_type_math_to_bool
-		|Op_and|Op_or|Op_eq |Op_not_eq -> Op_type_bool
+let raise_no_main dummy =
+	raise(Syntax_error (sprintf "No defined 'main' procedure"));
 ;;
 
-(* let get_op_type op =
-	match op with
+let raise_main_mustnothave_params dummy =
+	raise(Syntax_error (sprintf "The 'main' procedure must not contain any parameters"));
+;;
+(* End Error raising*)
 
-		|Op_minus-> Op_type_math
-		|Op_not-> Op_type_bool
-	;; *)
 
+(* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
 	 debugmsg "Initiated";
 ;; 
 
-
+(* The last function to run for checking "main" procedure and checking invoked procedures*)
 let finalize_prog prog =
 	debugmsg "Finalized"; 
 	prog;
@@ -97,7 +99,7 @@ let finalize_prog prog =
 
 (* Check if the expr has the type bool, used in IF and While *)
 let check_expr_bool expr  =
-	if  get_expr_type expr != Expr_Bool then
+	if get_expr_type expr != Expr_Bool then
 		raise_expect_bool expr;
 	expr;
 ;;
@@ -105,7 +107,7 @@ let check_expr_bool expr  =
 (* check and assign expr type for Ebinop operations *)
 let check_expr_op expr  =
 	let Ebinop (expr1,op,expr2,expr_type) = expr in
-	let expr_type_final = ref Expr_Float in
+	let expr_type_final = ref Expr_Float in (* for assigning the expr_type for the parent expr*)
 	match get_op_type op with
 		|Op_type_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
