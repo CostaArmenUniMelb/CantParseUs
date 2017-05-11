@@ -194,7 +194,7 @@ let finalize_prog prog =
 let check_proc proc =
 	let proc_id = (get_proc_id proc) in
 	check_not_exist Proc proc_id;
-	debugmsg "Insert new proc " ^ proc_id ^ "\n";
+	debugmsg ("Insert new proc " ^ proc_id ^ "\n");
 	insert_symbol Proc proc_id proc;
 ;;
 
@@ -224,9 +224,12 @@ let check_invoke invoke =
 	(* We can't really check the invoked procedure since all procedures have not been declard yet.
 	 All we can do is the save them in the symbol table and wait until we have already read all procedures
 	  then we can check this *)
-	let InvokeProc (id, exprs) = invoke in
-	debugmsg "Insert invoked proc " ^ id ^ "\n";
-	insert_symbol Invoke id invoke;
+	match invoke with
+	| InvokeProc (id, exprs) ->
+		debugmsg ("Insert invoked proc " ^ id ^ "\n");
+		insert_symbol Invoke id invoke;
+
+	|_ -> invoke;
 ;;
 
 let check_lvalue lvalue =
