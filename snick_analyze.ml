@@ -17,7 +17,7 @@ let debugmsg msg =
 
 (* ----Type management---- *)
 
-let get_expr_type expr =
+let get_expr_type_for_expr expr =
 	match expr with
 	  | Estring (string, expr_type)-> expr_type
 	  | Ebool (bool, expr_type)-> expr_type
@@ -93,67 +93,69 @@ let get_op_type op =
 
 (* ----Error raising----*)
 
+let raise_syn_err msg = 
+	raise(Syntax_error  (msg) );
+;;
+
+
 let raise_type_mismatch expr1 expr2 = 
-	raise(Syntax_error (sprintf "Expression Type Mismatch: %s and %s" 
-				(expr_type_tostring (get_expr_type expr1))
-				(expr_type_tostring (get_expr_type expr2))
-				)
+	raise_syn_err (sprintf "Expression Type Mismatch: %s and %s" 
+				(expr_type_tostring (get_expr_type_for_expr expr1))
+				(expr_type_tostring (get_expr_type_for_expr expr2))
 			); 
 ;;
 
 let raise_assign_type_mismatch expr_type1 expr_type2 = 
-	raise(Syntax_error (sprintf "Assigning Type Mismatch: %s and %s" 
+	raise_syn_err (sprintf "Assigning Type Mismatch: %s and %s" 
 				(expr_type_tostring expr_type1)
 				(expr_type_tostring expr_type2)
-				)
 			); 
 ;;
 
 let raise_param_type_mismatch expr_type1 expr_type2 = 
-	raise(Syntax_error (sprintf "The formal and actual parameter type Mismatch: %s and %s" 
+	raise_syn_err (sprintf "The formal and actual parameter type Mismatch: %s and %s" 
 				(expr_type_tostring expr_type1)
 				(expr_type_tostring expr_type2)
-				)
 			); 
 ;;
 
 let raise_invalid_arraysize min max =
-	raise(Syntax_error (sprintf "Invalid Array Size: %d and %d" min max));
+	raise_syn_err (sprintf "Invalid Array Size: %d and %d" min max);
 ;;
 
 let raise_out_of_bound min max index=
-	raise(Syntax_error (sprintf "Index out of bound, possible values is %d and %d 
-						but the index is %d" min max index));
+	raise_syn_err (sprintf "Index out of bound, possible values is %d and %d 
+						but the index is %d" min max index);
 ;;
 
 let raise_num_of_param_mismatch expected actual =
-	raise(Syntax_error (sprintf "Number of params does not match. The expected is %d but the actual is %d" expected actual));
+	raise_syn_err (sprintf "Number of params does not match. The expected is %d but the actual is %d" expected actual);
 ;;
 
 let raise_not_exist id =
-	raise(Syntax_error (sprintf "'%s' does not exist" id));
+	raise_syn_err (sprintf "'%s' does not exist" id);
 ;;
 
 let raise_already_exist id =
-	raise(Syntax_error (sprintf "'%s' has been declared" id));
+	raise_syn_err (sprintf "'%s' has been declared" id);
 ;;
 
 let raise_zero_division dummy =
-	raise(Syntax_error (sprintf "Cannot divide by zero"));
+	raise_syn_err (sprintf "Cannot divide by zero");
 ;;
 
 let raise_expect_bool expr =
-	raise(Syntax_error (sprintf "The expected expression type must be Bool
-						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
+	raise_syn_err (sprintf "The expected expression type must be Bool
+						but the current expression is %s" (expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_int expr =
-	raise(Syntax_error (sprintf "The expected expression type must be Int 
-						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
+	raise_syn_err (sprintf "The expected expression type must be Int 
+						but the current expression is %s" (expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_main_mustnothave_params dummy =
-	raise(Syntax_error (sprintf "The 'main' procedure must not contain any parameters"));
+	raise_syn_err (sprintf "The 'main' procedure must not contain any parameters");
 ;;
 
 (* ----END Error raising----*)
@@ -256,7 +258,7 @@ let finalize_prog prog =
 		(* 2.3 check Type of expr and formal param *)
 		for j = 0 to List.length(formal_params) - 1  do 
 			let formal_param_type = (get_expr_type_for_param (List.nth formal_params j)) in
-			let invoke_expr_type = (get_expr_type  (List.nth invoke_exprs j)) in
+			let invoke_expr_type = (get_expr_type_for_expr  (List.nth invoke_exprs j)) in
 
 			check_lhs_rhs_type_match formal_param_type invoke_expr_type 1;
 		done;
@@ -289,7 +291,7 @@ let check_assign assign =
 	| Assign (lvalue, rvalue) -> 
 		let lid = (get_lvalue_id lvalue) in
 		let lexpr_type = (get_param_type_from_tbl Current lid) in
-		let rexpr_type = (get_expr_type (get_rvalue_expr rvalue)) in
+		let rexpr_type = (get_expr_type_for_expr (get_rvalue_expr rvalue)) in
 		(*check if param is exist*)
 		check_exist Current lid;
 		(* Check type match*)
@@ -322,7 +324,7 @@ let check_lvalue lvalue =
   	| LArrayElement (id , expr_list) ->
   		for i = 0 to List.length(expr_list) -1  do 
 			let expr = (List.nth expr_list i) in
-			if (get_expr_type expr) != Expr_Int then
+			if (get_expr_type_for_expr expr) != Expr_Int then
 				raise_expect_int expr; 
 		done;
 		lvalue;
@@ -331,7 +333,7 @@ let check_lvalue lvalue =
 
 (* Check if the expr has the type bool, used in IF and While *)
 let check_expr_bool expr  =
-	if get_expr_type expr != Expr_Bool then
+	if get_expr_type_for_expr expr != Expr_Bool then
 		raise_expect_bool expr;
 	expr;
 ;;
@@ -344,8 +346,8 @@ let check_expr_op expr  =
 		match get_op_type op with
 			| Op_type_math | Op_type_math_to_bool -> 
 				(* Check if they are int or float, if not then thow the error *)
-				if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
-				|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
+				if (get_expr_type_for_expr expr1 != Expr_Int && get_expr_type_for_expr expr1 != Expr_Float) 
+				|| (get_expr_type_for_expr expr2 != Expr_Int && get_expr_type_for_expr expr2 != Expr_Float) then
 					raise_type_mismatch expr1 expr2;
 
 				(* Check divide by zero *)
@@ -360,7 +362,7 @@ let check_expr_op expr  =
 		  		match get_op_type op with
 			  		|Op_type_math ->
 						(* Set the expr type, if any is float then the parent is also float *)
-						if (get_expr_type expr1 == Expr_Float || get_expr_type expr2 == Expr_Float) then
+						if (get_expr_type_for_expr expr1 == Expr_Float || get_expr_type_for_expr expr2 == Expr_Float) then
 							expr_type_final :=  Expr_Float
 						else
 							expr_type_final := Expr_Int
@@ -372,7 +374,7 @@ let check_expr_op expr  =
 				;
 
 			| Op_type_bool -> 
-				if get_expr_type expr1 != Expr_Bool || get_expr_type expr2 != Expr_Bool then
+				if get_expr_type_for_expr expr1 != Expr_Bool || get_expr_type_for_expr expr2 != Expr_Bool then
 					raise_type_mismatch expr1 expr2;
 				expr_type_final := Expr_Bool;
 			;
@@ -425,8 +427,8 @@ let check_dec dec =
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
 let assign_expr eunop =
 	match eunop with
-	 | Eunop (op,expr,expr_type) -> Eunop (op,expr,get_expr_type expr);
-	 | Eparens (expr,expr_type) -> Eparens (expr,get_expr_type expr);
+	 | Eunop (op,expr,expr_type) -> Eunop (op,expr,get_expr_type_for_expr expr);
+	 | Eparens (expr,expr_type) -> Eparens (expr,get_expr_type_for_expr expr);
 	 | _ -> eunop ;
 ;;
 
