@@ -342,45 +342,42 @@ let check_expr_bool expr  =
 let check_expr_op expr  =
 	match expr with
 	| Ebinop (expr1,op,expr2,expr_type) -> 
-		let expr_type_final = ref Expr_None in (* for assigning the expr_type for the parent expr*)
 		match get_op_type op with
-			| Op_type_math | Op_type_math_to_bool -> 
-				(* Check if they are int or float, if not then thow the error *)
-				if (get_expr_type_for_expr expr1 != Expr_Int && get_expr_type_for_expr expr1 != Expr_Float) 
-				|| (get_expr_type_for_expr expr2 != Expr_Int && get_expr_type_for_expr expr2 != Expr_Float) then
-					raise_type_mismatch expr1 expr2;
+		| Op_type_math | Op_type_math_to_bool -> 
+			(* Check if they are int or float, if not then thow the error *)
+			if (get_expr_type_for_expr expr1 != Expr_Int && get_expr_type_for_expr expr1 != Expr_Float) 
+			|| (get_expr_type_for_expr expr2 != Expr_Int && get_expr_type_for_expr expr2 != Expr_Float) then
+				raise_type_mismatch expr1 expr2;
 
-				(* Check divide by zero *)
-				if op == Op_div then
-					match expr2 with
-					  | Eint (int, expr_type)-> if int == 0 then raise_zero_division "";
-					  | Efloat (float, expr_type)-> if float == 0.0 then raise_zero_division "";
-					  | _ -> ();
-		  		;
+			(* Check divide by zero *)
+			if op == Op_div then
+				match expr2 with
+				| Eint (int, expr_type)-> if int == 0 then raise_zero_division "";
+				| Efloat (float, expr_type)-> if float == 0.0 then raise_zero_division "";
+				| _ -> ();
+	  		;
 
-		  		(* set the expr type for the parent expr*)
-		  		match get_op_type op with
-			  		|Op_type_math ->
-						(* Set the expr type, if any is float then the parent is also float *)
-						if (get_expr_type_for_expr expr1 == Expr_Float || get_expr_type_for_expr expr2 == Expr_Float) then
-							expr_type_final :=  Expr_Float
-						else
-							expr_type_final := Expr_Int
-						;
-					|Op_type_math_to_bool ->
-						(* for some operations such as lt ,gt the result must be bool*)
-						expr_type_final := Expr_Bool;
-					|_ -> ();
+	  		(* Set the expr type for the parent expr*)
+	  		match get_op_type op with
+	  		| Op_type_math ->
+				(* Set the expr type, if any is float then the parent is also float *)
+				if (get_expr_type_for_expr expr1 == Expr_Float || get_expr_type_for_expr expr2 == Expr_Float) then
+					Ebinop (expr1,op,expr2,Expr_Float)
+				else
+					Ebinop (expr1,op,expr2,Expr_Int)
 				;
-
-			| Op_type_bool -> 
-				if get_expr_type_for_expr expr1 != Expr_Bool || get_expr_type_for_expr expr2 != Expr_Bool then
-					raise_type_mismatch expr1 expr2;
-				expr_type_final := Expr_Bool;
+			| Op_type_math_to_bool ->
+				(* for some operations such as lt ,gt the result must be bool*)
+				Ebinop (expr1,op,expr2,Expr_Bool);
+			| _ -> Ebinop (expr1,op,expr2,Expr_None);
 			;
 
-		debugmsg ("Type =" ^ (expr_type_tostring !expr_type_final) );
-		Ebinop (expr1,op,expr2,!expr_type_final);
+		| Op_type_bool -> 
+			if get_expr_type_for_expr expr1 != Expr_Bool || get_expr_type_for_expr expr2 != Expr_Bool then
+				raise_type_mismatch expr1 expr2;
+			Ebinop (expr1,op,expr2,Expr_Bool);
+		;
+
 	| _ -> expr;
 ;;
 
