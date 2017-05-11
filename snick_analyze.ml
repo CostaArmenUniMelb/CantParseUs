@@ -161,7 +161,7 @@ let add_tbl tbl_type =
 ;;
 
 let insert_symbol tbl_type id obj =
-	obj;
+	();
 ;;
 
 let check_exist tbl_type id =
@@ -196,6 +196,7 @@ let check_proc proc =
 	check_not_exist Proc proc_id;
 	debugmsg ("Insert new proc " ^ proc_id ^ "\n");
 	insert_symbol Proc proc_id proc;
+	proc;
 ;;
 
 let check_assign assign =
@@ -228,6 +229,7 @@ let check_invoke invoke =
 	| InvokeProc (id, exprs) ->
 		debugmsg ("Insert invoked proc " ^ id ^ "\n");
 		insert_symbol Invoke id invoke;
+		invoke;
 
 	|_ -> invoke;
 ;;
@@ -264,9 +266,7 @@ let check_expr_op expr  =
 				if (get_expr_type expr1 != Expr_Int && get_expr_type expr1 != Expr_Float) 
 				|| (get_expr_type expr2 != Expr_Int && get_expr_type expr2 != Expr_Float) then
 					raise_type_mismatch expr1 expr2;
-	(* 			(* If strict, not allow assigning float to in (strict should be true for Assigning only) *)
-				if strict && (get_expr_type expr1 == Expr_Int && get_expr_type expr1 == Expr_Float) then 
-					raise(Syntax_error (sprintf "Type mismatch" )); *)
+
 				(* Check divide by zero *)
 				if op == Op_div then
 					match expr2 with
@@ -295,6 +295,7 @@ let check_expr_op expr  =
 					raise_type_mismatch expr1 expr2;
 				expr_type_final := Expr_Bool;
 			;
+
 		debugmsg ("Type =" ^ (expr_type_tostring !expr_type_final) );
 		Ebinop (expr1,op,expr2,!expr_type_final);
 	| _ -> expr;
@@ -320,16 +321,24 @@ let check_typedef_range ttypedef =
 the params can be REF or VAL while the dec is only VAL *)
 let check_param param =
 	let (reftype, typedef,expr_type) = param in
+	let id = (get_typedef_id typedef) in
+	check_not_exist Current id;
 	(* save to symbol table*)
-	insert_symbol Current (get_typedef_id typedef) (reftype, typedef, get_expr_type_for_typedef typedef);
+	insert_symbol Current id (reftype, typedef, get_expr_type_for_typedef typedef);
+
+	(reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
 
 let check_dec dec =
 	let (typedef,expr_type) = dec in
-
-	check_typedef_range(typedef);
-	(* save to symbol table*)
-	insert_symbol Current (get_typedef_id typedef) (typedef,get_expr_type_for_typedef typedef);
+	let id = (get_typedef_id typedef) in
+	check_not_exist Current id;
+	(* Check array size *)
+	check_typedef_range typedef;
+	(* cast to param and save to symbol table*)
+	insert_symbol Current id (Value, typedef,get_expr_type_for_typedef typedef);
+	(* return dec*)
+	(typedef, get_expr_type_for_typedef typedef);
 ;;
 
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
