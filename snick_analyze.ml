@@ -1,3 +1,9 @@
+(*
+Author: Songpoom Rasdussadee 
+Purpose: Snick_analyze is used for syntax checking e.g. type matching between expressions
+as well as  storing procedures and their parameters in the appropriate symbol tables so that 
+the Snick_codegen  can use it for generateing the IR code
+*)
 open Printf 
 open Snick_ast
 
