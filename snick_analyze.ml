@@ -52,6 +52,11 @@ let get_expr_type_for_typedef typedef =
 		|Array (datatype,id,ranges) -> get_expr_type_for_datatype datatype
 ;;
 
+let get_expr_type_for_param param =
+	let (reftype, typedef,expr_type) = param in
+	get_expr_type_for_typedef typedef;
+;;
+
 let get_typedef_id typedef =
 	match typedef with
 		|Single (datatype,id) -> id
@@ -82,6 +87,8 @@ let get_op_type op =
 		|Op_and |Op_or |Op_eq |Op_not_eq -> Op_type_bool
 ;;
 
+
+
 (* ----END Type management---- *)
 
 (* ----Error raising----*)
@@ -102,6 +109,14 @@ let raise_assign_type_mismatch expr_type1 expr_type2 =
 			); 
 ;;
 
+let raise_param_type_mismatch expr_type1 expr_type2 = 
+	raise(Syntax_error (sprintf "The formal and actual parameter type Mismatch: %s and %s" 
+				(expr_type_tostring expr_type1)
+				(expr_type_tostring expr_type2)
+				)
+			); 
+;;
+
 let raise_invalid_arraysize min max =
 	raise(Syntax_error (sprintf "Invalid Array Size: %d and %d" min max));
 ;;
@@ -109,6 +124,10 @@ let raise_invalid_arraysize min max =
 let raise_out_of_bound min max index=
 	raise(Syntax_error (sprintf "Index out of bound, possible values is %d and %d 
 						but the index is %d" min max index));
+;;
+
+let raise_num_of_param_mismatch expected actual =
+	raise(Syntax_error (sprintf "Number of params does not match. The expected is %d but the actual is %d" expected actual));
 ;;
 
 let raise_not_exist id =
@@ -133,10 +152,6 @@ let raise_expect_int expr =
 						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
 ;;
 
-let raise_no_main dummy =
-	raise(Syntax_error (sprintf "No defined 'main' procedure"));
-;;
-
 let raise_main_mustnothave_params dummy =
 	raise(Syntax_error (sprintf "The 'main' procedure must not contain any parameters"));
 ;;
@@ -147,18 +162,19 @@ let raise_main_mustnothave_params dummy =
 
 (*For keeping the current parsing procedure name (we define current_tblname = procedure name)*)
 (*It changes every time we read a new procedure*)
-let current_tblname = "";;
+let current_tblname = ref "";;
 
 let get_tblname tbl_type =
 	match tbl_type with
 	  | Proc -> "proc"
 	  | Invoke -> "-__invoke__-" (*The name should be unique*)
-	  | Current -> current_tblname
+	  | Current -> !current_tblname
 ;;
 
-let add_tbl tbl_type =
-	();
+let set_current_tbl tblname =
+	current_tblname := tblname;
 ;;
+
 
 let insert_symbol tbl_type id obj =
 	();
@@ -178,15 +194,75 @@ let get_param_type_from_tbl tbl_type id =
 
 (* ----END Symbol table management----*)
 
+(* ----Utility----*)
+(* Check type and trhow type mis match error base on the assign_or_param value 
+	0 for assign
+	1 for param checking*)
+let check_lhs_rhs_type_match lexpr_type rexpr_type assign_or_param =
+	if (lexpr_type == Expr_Int && rexpr_type == Expr_Float) 
+	||(lexpr_type == Expr_Bool && rexpr_type != Expr_Bool) 
+	||(lexpr_type != Expr_Bool && rexpr_type == Expr_Bool) then 
+
+		if assign_or_param == 0 then
+			raise_assign_type_mismatch lexpr_type rexpr_type
+		else
+			raise_param_type_mismatch lexpr_type rexpr_type
+		;
+;;
+
+(* ----END Utility----*)
+
+
 (* ----Functions for parser----*)
 
 (* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
 	 debugmsg "Initiated";
+	 (* Add symbol tbls for Proc and invoke *)
+
+(* 	 Snick_symbol.add_table (get_tblname Proc);
+	 Snick_symbol.add_table (get_tblname Invoke); *)
 ;; 
 
 (* The last function to run for checking "main" procedure and checking invoked procedures*)
 let finalize_prog prog =
+	(* Check if "main" proc exist *)
+	check_exist Proc "main";
+	(* 1. if main exist, check param*)
+
+(* 	let main = (Snick_symbol.find Proc "main") in
+	let (id,params,proc_body) = main in
+	if List.length (params) >0 then
+		raise_main_mustnothave_params ""; *)
+
+	(*2. Check if the invoked procs is valid *)
+
+
+	(* let invoke_list = (Snick_symbol.get_list Proc) in
+	for i = 0 to List.length(invoke_list) - 1  do 
+		let invoke = (List.nth invoke_list i) in
+		let InvokeProc (invoke_id, invoke_exprs) = invoke in
+
+		(*2.1 Check id invoked proc is exist *)
+		check_exist Proc invoke_id;
+
+		(*2.2 check size of params is matched *)
+		let target_proc = Snick_symbol.find Proc invoke_id in
+		let ( _, formal_params, _ ) = target_proc in
+		
+		if List.length(formal_params) != List.length(invoke_exprs) then
+			raise_num_of_param_mismatch List.length(formal_params) List.length(invoke_exprs);
+
+		(* 2.3 check Type of expr and formal param *)
+		for j = 0 to List.length(formal_params) - 1  do 
+			let formal_param_type = (get_expr_type_for_param (List.nth formal_params j)) in
+			let invoke_expr_type = (get_expr_type  (List.nth invoke_exprs j)) in
+
+			check_lhs_rhs_type_match formal_param_type invoke_expr_type 1;
+		done;
+
+	done; *)
+
 	debugmsg "Finalized"; 
 	prog;
 ;;
@@ -195,6 +271,14 @@ let check_proc proc =
 	let proc_id = (get_proc_id proc) in
 	check_not_exist Proc proc_id;
 	debugmsg ("Insert new proc " ^ proc_id ^ "\n");
+
+	(* Add the new sym table for this proc*)
+	(* Snick_symbol.add_table proc_id ; *)
+
+	(* Set  this proc to the current proc*)
+	set_current_tbl proc_id;
+
+	(* insert this proc info to the Proc table*)
 	insert_symbol Proc proc_id proc;
 	proc;
 ;;
@@ -212,10 +296,7 @@ let check_assign assign =
 		(* Possible invlid assign
 			-float cannot be assigned to int 
 			-LHS is bool but RHS is not bool and vice versa*)
-		if (lexpr_type == Expr_Int && rexpr_type == Expr_Float) 
-			||(lexpr_type == Expr_Bool && rexpr_type != Expr_Bool) 
-			||(lexpr_type != Expr_Bool && rexpr_type == Expr_Bool) then 
-			raise_assign_type_mismatch lexpr_type rexpr_type;
+		check_lhs_rhs_type_match lexpr_type rexpr_type 0;
 
 		assign;
 	| _ -> debugmsg "Invalid Assign\n"; assign;
