@@ -4,6 +4,7 @@ open Snick_ast
 exception Syntax_error of string;;
 
 (* ----Debugging---- *)
+
 let debugging = true;;
 
 (* Show  some messages for debugging *)
@@ -11,9 +12,11 @@ let debugmsg msg =
 	if debugging then 
 		print_string msg;
 ;;
+
 (* ----END Debugging---- *)
 
 (* ----Type management---- *)
+
 let get_expr_type expr =
 	match expr with
 	  | Estring (string, expr_type)-> expr_type
@@ -47,8 +50,25 @@ let get_expr_type_for_typedef typedef =
 	match typedef with
 		|Single (datatype,id) -> get_expr_type_for_datatype datatype
 		|Array (datatype,id,ranges) -> get_expr_type_for_datatype datatype
-
 ;;
+
+let get_typedef_id typedef =
+	match typedef with
+		|Single (datatype,id) -> id
+		|Array (datatype,id,ranges) -> id
+;;
+
+let get_proc_id proc =
+	let (identifier , parameter_def_list , procedure_body) = proc in
+	identifier;
+;;
+
+let get_lvalue_id lvalue =
+	match lvalue with
+	| LId(id) -> id
+  	| LArrayElement (id , expr_list) ->id
+;;
+
 
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
@@ -57,9 +77,11 @@ let get_op_type op =
 		|Op_lt |Op_gt |Op_lt_eq |Op_gt_eq-> Op_type_math_to_bool
 		|Op_and |Op_or |Op_eq |Op_not_eq -> Op_type_bool
 ;;
+
 (* ----END Type management---- *)
 
 (* ----Error raising----*)
+
 let raise_type_mismatch expr1 expr2 = 
 	raise(Syntax_error (sprintf "Type mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type expr1))
@@ -90,7 +112,12 @@ let raise_zero_division dummy =
 ;;
 
 let raise_expect_bool expr =
-	raise(Syntax_error (sprintf "The expected expression type must be boolean 
+	raise(Syntax_error (sprintf "The expected expression type must be Bool
+						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
+;;
+
+let raise_expect_int expr =
+	raise(Syntax_error (sprintf "The expected expression type must be Int 
 						but the current expression is %s" (expr_type_tostring (get_expr_type expr)) ));
 ;;
 
@@ -101,9 +128,11 @@ let raise_no_main dummy =
 let raise_main_mustnothave_params dummy =
 	raise(Syntax_error (sprintf "The 'main' procedure must not contain any parameters"));
 ;;
+
 (* ----END Error raising----*)
 
 (* ----Symbol table management----*)
+
 (*For keeping the current parsing procedure name (we define current_tblname = procedure name)*)
 (*It changes every time we read a new procedure*)
 let current_tblname = "";;
@@ -120,7 +149,7 @@ let add_tbl tbl_type =
 ;;
 
 let insert_symbol tbl_type id obj =
-	();
+	obj;
 ;;
 
 let check_exist tbl_type id =
@@ -134,6 +163,7 @@ let check_not_exist tbl_type id =
 (* ----END Symbol table management----*)
 
 (* ----Functions for parser----*)
+
 (* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
 	 debugmsg "Initiated";
@@ -146,7 +176,9 @@ let finalize_prog prog =
 ;;
 
 let check_proc proc =
-	proc;
+	let proc_id = (get_proc_id proc) in
+	check_not_exist Proc proc_id;
+	insert_symbol Proc proc_id proc;
 ;;
 
 let check_assign assign =
@@ -159,6 +191,16 @@ let check_invoke invoke =
 ;;
 
 let check_lvalue lvalue =
+	check_exist Current (get_lvalue_id lvalue);
+	(* check if the input is array with exprs, the expr_type of all exprs must be int only*)
+	match lvalue with
+  	| LArrayElement (id , expr_list) ->
+  		for i = 0 to List.length(expr_list) -1  do 
+			let expr = (List.nth expr_list i) in
+			if (get_expr_type expr) != Expr_Int then
+				raise_expect_int expr; 
+		done;
+	| _ -> debugmsg "Not an array\n"; ;
 	lvalue;
 ;;
 
@@ -235,31 +277,25 @@ let check_typedef_range ttypedef =
 (* The differences between dec and param is 
 the params can be REF or VAL while the dec is only VAL *)
 let check_param param =
-	let (reftype, typedef,expr_type) =param in
-	(* check_typedef_range(typedef);  no chance tat param will be an array*)
+	let (reftype, typedef,expr_type) = param in
 	(* save to symbol table*)
-	(reftype, typedef, get_expr_type_for_typedef typedef);
+	insert_symbol Current (get_typedef_id typedef) (reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
 
 let check_dec dec =
-	let (typedef,expr_type) =dec in
+	let (typedef,expr_type) = dec in
 
 	check_typedef_range(typedef);
 	(* save to symbol table*)
-	(typedef,get_expr_type_for_typedef typedef);
+	insert_symbol Current (get_typedef_id typedef) (typedef,get_expr_type_for_typedef typedef);
 ;;
 
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
-let assign_expr_unop eunop =
+let assign_expr eunop =
 	match eunop with
 	 | Eunop (op,expr,expr_type) -> Eunop (op,expr,get_expr_type expr);
+	 | Eparens (expr,expr_type) -> Eparens (expr,get_expr_type expr);
 	 | _ -> eunop ;
-;;
-
-let assign_expr_paren eparen =
-	match eparen with
-	| Eparens (expr,expr_type) -> Eparens (expr,get_expr_type expr);
-	| _ -> eparen ;
 ;;
 
 (* ----END Functions for parser----*)

@@ -178,6 +178,6 @@ expr:
   | expr AND expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_and, $3, Expr_None))  }
   | expr OR expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_or, $3, Expr_None))  }
 
-  | MINUS expr %prec UMINUS { Snick_analyze.assign_expr_unop (Eunop (Op_minus, $2, Expr_None)) }
-  | NOT expr  { Snick_analyze.assign_expr_unop (Eunop (Op_not, $2, Expr_None)) }
-  | LPAREN expr RPAREN { Snick_analyze.assign_expr_paren (Eparens ($2, Expr_None)) }
+  | MINUS expr %prec UMINUS { Snick_analyze.assign_expr (Eunop (Op_minus, $2, Expr_None)) }
+  | NOT expr  { Snick_analyze.assign_expr (Eunop (Op_not, $2, Expr_None)) }
+  | LPAREN expr RPAREN { Snick_analyze.assign_expr (Eparens ($2, Expr_None)) }
