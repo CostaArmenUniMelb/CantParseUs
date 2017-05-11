@@ -69,6 +69,10 @@ let get_lvalue_id lvalue =
   	| LArrayElement (id , expr_list) ->id
 ;;
 
+let get_rvalue_expr rvalue =
+	let Rexpr(expr) = rvalue in
+	expr;
+;;
 
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
@@ -83,9 +87,17 @@ let get_op_type op =
 (* ----Error raising----*)
 
 let raise_type_mismatch expr1 expr2 = 
-	raise(Syntax_error (sprintf "Type mismatch: %s and %s" 
+	raise(Syntax_error (sprintf "Expression Type Mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type expr1))
 				(expr_type_tostring (get_expr_type expr2))
+				)
+			); 
+;;
+
+let raise_assign_type_mismatch expr_type1 expr_type2 = 
+	raise(Syntax_error (sprintf "Assigning Type Mismatch: %s and %s" 
+				(expr_type_tostring expr_type1)
+				(expr_type_tostring expr_type2)
 				)
 			); 
 ;;
@@ -139,7 +151,7 @@ let current_tblname = "";;
 
 let get_tblname tbl_type =
 	match tbl_type with
-	  | Proc -> "-__proc__-"
+	  | Proc -> "proc"
 	  | Invoke -> "-__invoke__-"
 	  | Current -> current_tblname
 ;;
@@ -158,6 +170,10 @@ let check_exist tbl_type id =
 
 let check_not_exist tbl_type id =
 	();
+;;
+
+let get_param_type_from_tbl tbl_type id =
+	Expr_None;
 ;;
 
 (* ----END Symbol table management----*)
@@ -183,7 +199,24 @@ let check_proc proc =
 
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
-	assign;
+	match assign with
+	| Assign (lvalue, rvalue) -> 
+		let lid = (get_lvalue_id lvalue) in
+		let lexpr_type = (get_param_type_from_tbl Current lid) in
+		let rexpr_type = (get_expr_type (get_rvalue_expr rvalue)) in
+		(*check if param is exist*)
+		check_exist Current lid;
+		(* Check type match*)
+		(* Possible invlid assign
+			-float cannot be assigned to int 
+			-LHS is bool but RHS is not bool and vice versa*)
+		if (lexpr_type == Expr_Int && rexpr_type == Expr_Float) 
+			||(lexpr_type == Expr_Bool && rexpr_type != Expr_Bool) 
+			||(lexpr_type != Expr_Bool && rexpr_type == Expr_Bool) then 
+			raise_assign_type_mismatch lexpr_type rexpr_type;
+
+		assign;
+	| _ -> debugmsg "Invalid Assign\n"; assign;
 ;;
 
 let check_invoke invoke =
@@ -200,8 +233,8 @@ let check_lvalue lvalue =
 			if (get_expr_type expr) != Expr_Int then
 				raise_expect_int expr; 
 		done;
-	| _ -> debugmsg "Not an array\n"; ;
-	lvalue;
+		lvalue;
+	| _ -> debugmsg "Not an array\n"; lvalue;
 ;;
 
 (* Check if the expr has the type bool, used in IF and While *)

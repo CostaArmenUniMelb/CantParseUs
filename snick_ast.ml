@@ -70,7 +70,7 @@ Proc is used for storing all procedures and details
 Invoke is  for storing all invoked procedures and parameters
 Current is for storeing all parameters in a procedure. It will use the current procedure name 
   as the real name and changes everytime the parser reads a new procedure *)
-type tbl_type=
+type tbl_type =
   | Proc
   | Invoke
   | Current
