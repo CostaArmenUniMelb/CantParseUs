@@ -177,26 +177,30 @@ let set_current_tbl tblname =
 	current_tblname := tblname;
 ;;
 
-
+(* Three possible object types, Param, Proc, Invoke *)
 let insert_symbol tbl_type id obj =
+	(* Snick_symbol.insert (get_tblname tbl_type) id obj; *)
 	();
-;;
-
-let check_exist tbl_type id =
-	();
-;;
-
-let check_not_exist tbl_type id =
-	();
-;;
-
-let get_param_type_from_tbl tbl_type id =
-	Expr_None;
 ;;
 
 (* ----END Symbol table management----*)
 
 (* ----Utility----*)
+
+let check_exist tbl_type id =
+
+(* 	if ! (Snick_symbol.exist (get_tblname tbl_type) id) then
+		raise_not_exist id; *)
+	();
+;;
+
+let check_not_exist tbl_type id =
+
+(* 	if (Snick_symbol.exist (get_tblname tbl_type) id) then
+		raise_already_exist id; *)
+	();
+;;
+
 (* Check type and trhow type mis match error base on the assign_or_param value 
 	0 for assign
 	1 for param checking*)
@@ -287,10 +291,12 @@ let check_proc proc =
 
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
-	match assign with
+
+
+(* 	match assign with
 	| Assign (lvalue, rvalue) -> 
 		let lid = (get_lvalue_id lvalue) in
-		let lexpr_type = (get_param_type_from_tbl Current lid) in
+		let lexpr_type =  get_expr_type_for_param (Snick_symbol.find Current lid) in
 		let rexpr_type = (get_expr_type_for_expr (get_rvalue_expr rvalue)) in
 		(*check if param is exist*)
 		check_exist Current lid;
@@ -300,8 +306,13 @@ let check_assign assign =
 			-LHS is bool but RHS is not bool and vice versa*)
 		check_lhs_rhs_type_match lexpr_type rexpr_type 0;
 
+		(*TODO, if expr is an int constamt, check out of bound*)
+
 		assign;
-	| _ -> debugmsg "Invalid Assign\n"; assign;
+	| _ -> debugmsg "Invalid Assign\n"; assign; *)
+
+
+	assign;
 ;;
 
 let check_invoke invoke =
