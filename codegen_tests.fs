@@ -45,7 +45,7 @@ module Tests =
             )
             read_inputs_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
         
         let test_ref_proc =
             (
@@ -92,7 +92,7 @@ module Tests =
             )
             test_ref_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
 
         
         let write_bool_proc =
@@ -133,7 +133,7 @@ module Tests =
             )
             write_bool_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
         
         let assert_bool_proc = 
             (
@@ -174,7 +174,7 @@ module Tests =
             )
             assert_bool_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
         
         let assert_float_proc =
             (
@@ -215,7 +215,7 @@ module Tests =
             )
             assert_float_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
 
         let assert_int_proc = 
             (
@@ -308,7 +308,261 @@ module Tests =
             do_while_proc
             assert_int_proc
             ]
+            //|> codegen.Generate
+
+        let if_else_proc =
+            (
+            "if_else"
+            ,
+            []
+            ,
+            (
+            [
+            Single(Int,"a")
+            Single(Int,"j")
+            ]
+            ,
+            [
+            Assign(LId("j"),Rexpr(Eint(20)))
+            IfThenElse(
+                Ebinop(
+                    Ebinop(Elval(LId("a")),binop.Op_eq,Eint(0)),
+                    binop.Op_and,
+                    Ebinop(Elval(LId("j")),binop.Op_eq,Eint(20))
+                ),
+                [
+                Assign(LId("a"),Rexpr(Eint(10)))
+                IfThenElse(
+                    Ebinop(Elval(LId("a")),binop.Op_lt,Eint(5)),
+                    [Assign(LId("a"),Rexpr(Eint(20)))],
+                    [
+                    Assign(LId("a"),Rexpr(Eint(50)))
+                    IfThenElse(
+                        Ebinop(Elval(LId("a")),binop.Op_lt,Eint(30)),
+                        [Assign(LId("a"),Rexpr(Eint(40)))],
+                        [
+                        Assign(LId("a"),Rexpr(Eint(555)))
+                        Write(Estring("Correct IF-ELSE\\nn"))
+                        ]
+                    )
+                    ]
+                )
+                ],
+                [
+                Assign(LId("a"),Rexpr(Eint(20)))
+                ]
+            )
+            InvokeProc("assert_int",[Eint(555);Elval(LId("a"))])
+            ]
+            )
+            )
+
+        let if_else =
+            [
+            (
+            "main"
+            ,
+            [] //params
+            ,
+            (
+            [] //decls
+            ,
+            //stmts
+            [
+            InvokeProc("if_else",[])
+            ] 
+            )
+            )
+            if_else_proc
+            assert_int_proc
+            ]
+            //|> codegen.Generate
+
+        let logic_operation_proc =
+             (
+             "logic_operation"
+             ,
+             []
+             ,
+             (
+             [Single(Bool, "a")]
+             ,
+             [
+             InvokeProc("assert_bool",[Ebool(false); Elval(LId("a"))])
+             InvokeProc("assert_bool",[Ebool(true); Ebinop(Ebool(true),binop.Op_and, Ebool(true))])
+             InvokeProc("assert_bool",[Ebool(false); Ebinop(Ebool(true),binop.Op_and, Ebool(false))])
+             InvokeProc("assert_bool",[Ebool(true); Ebinop(Ebool(true),binop.Op_or,Ebinop(Ebool(false),binop.Op_and, Ebool(true)))])
+             ]
+             )
+             )
+        let logic_operation =
+            [
+            (
+            "main"
+            ,
+            []
+            ,
+            (
+            []
+            ,
+            [
+            InvokeProc("logic_operation",[])
+            ]
+            )
+            )
+            logic_operation_proc
+            assert_bool_proc
+            ]
+            //|> codegen.Generate
+
+        let math_operation_proc =
+            (
+            "math_operation"
+            ,
+            []
+            ,
+            (
+            []
+            ,
+            [
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_add,Eint(4)); Eint(7)])
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_sub,Eint(4)); Eint(-1)])
+            InvokeProc("assert_int",[Eunop(unop.Op_minus,Eparens(Ebinop(Eint(3),binop.Op_sub,Eint(4)))); Eint(1)])
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_mul,Eint(4)); Eint(12)])
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_div,Eint(4)); Eint(0)])
+
+            InvokeProc("assert_float",[Ebinop(Efloat(3.0),Op_div,Efloat(4.0)); Efloat(0.75)])
+            InvokeProc("assert_float",[Ebinop(Efloat(3.0),Op_div,Eint(4)); Efloat(0.75)])
+            InvokeProc("assert_float",[Ebinop(Eint(3),Op_div,Efloat(4.0)); Efloat(0.75)])
+
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_add,Ebinop(Eint(4),Op_mul,Eint(2))); Eint(11)])
+            InvokeProc("assert_int",[Ebinop(Eint(3),Op_sub,Ebinop(Eint(4),Op_mul,Eint(2))); Eint(-5)])
+            ]
+            )
+            )
+
+        let math_operation =
+            [
+            (
+            "main"
+            ,
+            []
+            ,
+            (
+            []
+            ,
+            [
+            InvokeProc("math_operation",[])
+            ]
+            )
+            )
+            assert_int_proc
+            assert_float_proc
+            math_operation_proc
+            ]
+            //|> codegen.Generate
+
+        let array_process_proc =
+            (
+            "array_process"
+            ,
+            []
+            ,
+            (
+            [
+            Array(Int,"a",[(1,20)])
+            Array(Int,"b",[(0,4);(2,6);(3,8)])
+            ]
+            ,
+            [
+            Assign(LArrayElement("a",[Eint(2)]),Rexpr(Eint(20)))
+            Assign(LArrayElement("b",[Eint(0);Eint(3);Eint(4)]),Rexpr(Eint(30)))
+
+            Assign(LArrayElement("a",[Eint(3)]),Rexpr(Elval(LArrayElement("b",[Eint(0);Eint(3);Eint(5)]))))
+            InvokeProc("assert_int",[Eint(0);Elval(LArrayElement("a",[Eint(3)]))])
+
+            Assign(LArrayElement("a",[Eint(4)]),Rexpr(Elval(LArrayElement("b",[Eint(0);Eint(3);Eint(4)]))))
+            InvokeProc("assert_int",[Eint(30);Elval(LArrayElement("a",[Eint(4)]))])
+            ]
+            )
+            )
+
+        let array_process =
+            [
+            (
+            "main"
+            ,
+            []
+            ,
+            (
+            []
+            ,
+            [
+            InvokeProc("array_process",[])
+            ]
+            )
+            )
+            array_process_proc
+            assert_int_proc
+            ]
             |> codegen.Generate
+
+        let simple_decleration_proc =
+            (
+            "simple_decleration"
+            ,
+            [
+            (Value,Single(Int,"input_1"))
+            (Value,Single(Float,"input_2"))
+            (Value,Single(Bool,"input_3"))
+            ]
+            ,
+            (
+            [
+            Single(Int,"a")
+            Single(Float,"b")
+            Single(Bool,"c")
+            ]
+            ,
+            [
+            Assign(LId("a"),Rexpr(Elval(LId("input_1"))))
+            InvokeProc("assert_int",[Elval(LId("input_1"));Elval(LId("a"))])
+
+            Assign(LId("b"),Rexpr(Elval(LId("input_2"))))
+            InvokeProc("assert_float",[Elval(LId("input_2"));Elval(LId("b"))])
+
+            Assign(LId("c"),Rexpr(Elval(LId("input_3"))))
+            InvokeProc("assert_bool",[Elval(LId("input_3"));Elval(LId("c"))])
+
+            Assign(LId("b"),Rexpr(Eint(20)))
+            InvokeProc("assert_float",[Efloat(20.0);Elval(LId("b"))])
+            ]
+            )
+            )
+
+        let simple_decleration =
+            [
+            (
+            "main"
+            ,
+            []
+            ,
+            (
+            []
+            ,
+            [
+            InvokeProc("simple_decleration",[Eint(1);Efloat(2.0);Ebool(false)])
+            ]
+            )
+            )
+            simple_decleration_proc
+            assert_int_proc
+            assert_bool_proc
+            assert_float_proc
+            ]
+            |> codegen.Generate
+
+
     
     module Assignment =
         let assignment_gcd =
@@ -401,7 +655,7 @@ module Tests =
             )
             )
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
 
         let q45 =
             [

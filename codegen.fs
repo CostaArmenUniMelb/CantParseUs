@@ -313,7 +313,7 @@ module codegen =
                 let Int(ranges:range list) : int =
                     ranges 
                     |> List.map (fun (rmin, rmax) -> rmax - rmin + 1) 
-                    |> List.reduce (fun n1 n2 -> n1 + n2)
+                    |> List.reduce (fun n1 n2 -> n1 * n2)
 
             let VarNames(varName:string, ranges:range list) : string list =
                 [for i in 0..Offset.Int(ranges) -> i]
@@ -367,9 +367,12 @@ module codegen =
                 )
 
         let Count(decls:decleration list): int = 
-            decls
-            |> List.map (fun decl -> Decleration.Count(decl))
-            |> List.reduce (fun n1 n2 -> n1 + n2)
+            match decls with
+            | [] -> 0
+            | _ -> 
+                decls
+                |> List.map (fun decl -> Decleration.Count(decl))
+                |> List.reduce (fun n1 n2 -> n1 + n2)
 
     module LValue =
         let Id(lv:lvalue) : identifier = 
@@ -430,7 +433,8 @@ module codegen =
                         | Op_lt_eq -> CmpLeInt(reg1, reg1, reg2)
                         | Op_gt -> CmpGtInt(reg1, reg1, reg2)
                         | Op_gt_eq -> CmpGeInt(reg1, reg1, reg2)
-                        | _ -> failwith "cannot non arithmetic/comparison binop with int"
+                        | Op_and -> And(reg1, reg1, reg2)
+                        | Op_or -> Or(reg1, reg1, reg2)
                         |> Instruction.To.Code
 
                 module Real =
@@ -453,6 +457,7 @@ module codegen =
                 let Type(datatype1:datatype, binop:binop, datatype2:datatype) : datatype =
                     match datatype1, datatype2 with
                     | datatype.Bool, datatype.Bool -> datatype.Bool
+                    | datatype.Int, datatype.Int -> datatype.Int
                     | _ -> failwith "cannot perform logical ops on non booleans"
 
                 let Code(binop:binop, reg1:Reg, reg2:Reg) : Code =
@@ -546,7 +551,7 @@ module codegen =
                         let address_reg = reg + 1
                         [
                         LoadAddress(address_reg, lv_var_slotNum)
-                        SubOffset(address_reg, address_reg, 0)
+                        SubOffset(address_reg, address_reg, reg)
                         LoadIndirect(reg, address_reg)
                         ]
                     let code = offset_expr_code @ load_code
@@ -596,17 +601,23 @@ module codegen =
             | Assign(lv, rv) -> 
                 let lv_var = Env.Find(LValue.Id(lv), env)
                 let lv_var_slotNum = lv_var.slotNum
+                let lv_var_datatype = lv_var.datatype
                 let lv_var_decl = lv_var.typedef
                 let rv_reg = 0
                 let rv_expr_attr = Expr.ExprAttr(RValue.Expr(rv),rv_reg,env)
-                let rv_code = rv_expr_attr.code
+                let rv_datatype = rv_expr_attr.datatype
+                let rv_convert_code = 
+                    match lv_var_datatype, rv_datatype with
+                    | datatype.Float, datatype.Int -> [IntToReal(rv_reg,rv_reg)]
+                    | _ -> []
+                let rv_code = rv_expr_attr.code @ rv_convert_code
                 let comment_code = [Comment("assign")]
                 let store_code = 
                     match lv with
                     | LId(_) -> 
                         match lv_var.passby with
                         | Value -> [Store(lv_var_slotNum, rv_reg)]
-                        | Reference -> [Load(1,lv_var_slotNum);StoreIndirect(1,0)]
+                        | Reference -> [Load(1,lv_var_slotNum);StoreIndirect(1,rv_reg)]
                     | LArrayElement(_,exprs) -> 
                         let offset_expr = Decleration.Array.Offset.Expr(lv_var_decl, exprs)
                         let offset_expr_reg = 1
@@ -704,12 +715,15 @@ module codegen =
                         reg := !reg + 1
                         match expr with
                         | Elval(lv) -> 
-                            let lv_var = Env.Find(LValue.Id(lv),env)
-                            let lv_var_slotNum = lv_var.slotNum
-                            let proc_arg_passby = ProcParams.PassBy.ArgIndex(id, !reg, procParams)
-                            match proc_arg_passby with
-                            | Value -> [Load(!reg, lv_var_slotNum)]
-                            | Reference -> [LoadAddress(!reg, lv_var_slotNum)]
+                            match lv with
+                            | LId(_) -> 
+                                let lv_var = Env.Find(LValue.Id(lv),env)
+                                let lv_var_slotNum = lv_var.slotNum
+                                let proc_arg_passby = ProcParams.PassBy.ArgIndex(id, !reg, procParams)
+                                match proc_arg_passby with
+                                | Value -> [Load(!reg, lv_var_slotNum)]
+                                | Reference -> [LoadAddress(!reg, lv_var_slotNum)]
+                            | LArrayElement(_,_) -> Expr.ExprAttr(expr, !reg, env).code
                         | _ -> Expr.ExprAttr(expr, !reg, env).code
                         )    
                     |> List.concat
@@ -830,7 +844,9 @@ module codegen =
             let stmts = Stmts(p)
             let env = ref Env.Init
             let paramdefs = ParamDefs(p)
-            //let var_count = Declerations.Count(decls) + ParameterDefs.Count(paramdefs)
+//            let decl_count = Declerations.Count(decls)
+//            let paramdef_count = ParameterDefs.Count(paramdefs)
+//            let var_count = decl_count + paramdef_count
             ParameterDefs.Env(paramdefs, env)
             Declerations.Env(decls, env)
             let var_count = (!env).Count
