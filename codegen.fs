@@ -121,7 +121,7 @@ module codegen =
             let String(builtin:BuiltIn) : string =
                 match builtin with
                 | BuiltIn.PrintInt -> "print_int"
-                | BuiltIn.PrintReal -> "print_float"
+                | BuiltIn.PrintReal -> "print_real"
                 | BuiltIn.PrintBool -> "print_bool"
                 | BuiltIn.PrintString -> "print_string"
                 | BuiltIn.ReadInt -> "read_int"
@@ -143,15 +143,6 @@ module codegen =
                     match passby with
                     | Value -> [Load(reg, slotNum)]
                     | Reference -> [Load(reg, slotNum);LoadIndirect(reg, reg)]
-        
-        module Array =
-            module Load = 
-                let Code(reg:Reg, slotNum:SlotNum, offset:Reg) : Code =
-                    let address_reg = offset + 1
-                    [
-                    LoadAddress(address_reg, slotNum)
-                    SubOffset(address_reg, address_reg, offset)
-                    ]
 
 
         module To =
@@ -289,21 +280,43 @@ module codegen =
 
             let Sizes(ranges:range list) = 
                 ranges 
-                |> List.map (fun (s,e) -> e - s)
+                |> List.map (fun (s,e) -> e - s + 1)
 
-            module SlotNum =
-                let Position(startNum:int, ranges:range list, access:int list) : int =
-                    List.zip ranges access
-                    |> List.map (fun ((rmin,rmax), access) ->  access - rmin + 1)
-                    |> List.reduce (fun n1 n2 -> n1 * n2)
-
-                let Count(ranges:range list) : int =
+            module Offset =
+                let Expr(decl:decleration, exprs:expr list) : expr = 
+                    let exprs_count = exprs.Length
+                    let ranges = Ranges(decl)
+                    let ranges_mins = Mins(ranges)
+                    let ranges_sizes = Sizes(ranges)
+                    // Sum[1,d]( Prod[j=i+1,d]( N[j] ) * n[i]) where N[j] is size of dim, n[i] is index in array, d = dim number
+                    let offset_inner_product(j, d, ranges_sizes) = 
+                        if 
+                            j > d
+                        then 
+                            Eint(1)
+                        else
+                            [for x in j..d -> x]
+                            |> List.map (fun n -> List.item(n-1) ranges_sizes)
+                            |> List.reduce (fun n1 n2 -> n1 * n2)
+                            |> (fun n -> Eint(n))
+                    let offset_outer_sum(d, exprs, ranges_sizes) = 
+                        let i_to_d = [for i in 1..d -> i] 
+                        let index_exprs = 
+                            List.zip exprs ranges_mins
+                            |> List.map (fun (e, s) -> Ebinop(e, binop.Op_sub, Eint(s)))
+                        List.zip index_exprs i_to_d
+                        |> List.map (fun (e, i) -> Ebinop(e, binop.Op_mul, offset_inner_product(i+1, d, ranges_sizes)))
+                        |> List.reduce (fun e1 e2 -> Ebinop(e1, binop.Op_add, e2))
+                    offset_outer_sum(exprs_count, exprs, ranges_sizes)
+                    
+                
+                let Int(ranges:range list) : int =
                     ranges 
                     |> List.map (fun (rmin, rmax) -> rmax - rmin + 1) 
                     |> List.reduce (fun n1 n2 -> n1 + n2)
 
             let VarNames(varName:string, ranges:range list) : string list =
-                [for i in 0..SlotNum.Count(ranges) -> i]
+                [for i in 0..Offset.Int(ranges) -> i]
                 |> List.map(fun i ->
                     let varName = 
                         if i = 0 
@@ -329,7 +342,7 @@ module codegen =
         let Count(decl:decleration): int = 
             match decl with
             | Single(_,_) -> 1
-            | Array(_,_,ranges) -> Array.SlotNum.Count(ranges)
+            | Array(_,_,ranges) -> Array.Offset.Int(ranges)
                 
 
     module Declerations =           
@@ -401,6 +414,7 @@ module codegen =
                     | datatype.Float, datatype.Int -> datatype.Float
                     | datatype.Int, datatype.Float -> datatype.Float
                     | datatype.Float, datatype.Float -> datatype.Float
+                    | datatype.Bool, datatype.Bool -> datatype.Bool
                     | _ -> failwith "cannot perform arithmetic and comparison on non numbers"
 
                 module Int =    
@@ -445,6 +459,8 @@ module codegen =
                     match binop with
                     | Op_and -> And(reg1, reg1, reg2)
                     | Op_or -> Or(reg1, reg1, reg2)
+                    | Op_eq -> CmpEqInt(reg1, reg1, reg2)
+                    | Op_not_eq -> CmpNeInt(reg1, reg1, reg2)
                     | _ -> failwith "cannot non bool binop with bool"
                     |> Instruction.To.Code
 
@@ -523,30 +539,17 @@ module codegen =
                     let load_code = Instruction.Single.Load.Code(lv_var_passby, reg, lv_var_slotNum)
                     Attr.Create(load_code, lv_var_datatype)
                 | LArrayElement(id, exprs) -> 
-                    let exprs_count = exprs.Length
-                    let ranges = Decleration.Array.Ranges(lv_var_typedef)
-                    let ranges_mins = Decleration.Array.Mins(ranges)
-                    let ranges_sizes = Decleration.Array.Sizes(ranges)
-                    // Sum[1,d]( Prod[j=i+1,d]( N[j] ) * n[i]) where N[j] is size of dim, n[i] is index in array, d = dim number
-                    let offset_inner_product(j, d, ranges_sizes) = 
-                        if 
-                            j > d
-                        then 
-                            Eint(1)
-                        else
-                            [for x in j..d -> x]
-                            |> List.map (fun n -> List.item(n-1) ranges_sizes)
-                            |> List.reduce (fun n1 n2 -> n1 * n2)
-                            |> (fun n -> Eint(n))
-                    let offset_outer_sum(i, d, exprs, ranges_sizes) = 
-                        List.zip exprs [for x in i..d -> x]
-                        |> List.map (fun (e, i) -> Ebinop(e, binop.Op_mul, offset_inner_product(i+1, d, ranges_sizes)))
-                        |> List.reduce (fun e1 e2 -> Ebinop(e1, binop.Op_add, e2))
-                    let slotnum_offset_expr = offset_outer_sum(1, exprs_count, exprs, ranges_sizes)
-                    let slotnum_offset_expr_attr = ExprAttr(slotnum_offset_expr, reg, env)
-                    let slotnum_offset_expr_code = slotnum_offset_expr_attr.code
-                    let load_code = Instruction.Array.Load.Code(reg, lv_var_slotNum, 0)
-                    let code = slotnum_offset_expr_code @ load_code
+                    let offset_expr = Decleration.Array.Offset.Expr(lv_var_typedef, exprs)
+                    let offset_expr_attr = ExprAttr(offset_expr, reg, env)
+                    let offset_expr_code = offset_expr_attr.code
+                    let load_code = 
+                        let address_reg = reg + 1
+                        [
+                        LoadAddress(address_reg, lv_var_slotNum)
+                        SubOffset(address_reg, address_reg, 0)
+                        LoadIndirect(reg, address_reg)
+                        ]
+                    let code = offset_expr_code @ load_code
                     Attr.Create(code, lv_var_datatype)
 
             | expr.Eparens(expr) -> ExprAttr(expr, reg, env)
@@ -592,16 +595,31 @@ module codegen =
                 |> List.concat
             | Assign(lv, rv) -> 
                 let lv_var = Env.Find(LValue.Id(lv), env)
-                let rv_expr_attr = Expr.ExprAttr(RValue.Expr(rv),0,env)
+                let lv_var_slotNum = lv_var.slotNum
+                let lv_var_decl = lv_var.typedef
+                let rv_reg = 0
+                let rv_expr_attr = Expr.ExprAttr(RValue.Expr(rv),rv_reg,env)
                 let rv_code = rv_expr_attr.code
                 let comment_code = [Comment("assign")]
                 let store_code = 
                     match lv with
                     | LId(_) -> 
                         match lv_var.passby with
-                        | Value -> [Store(lv_var.slotNum, 0)]
-                        | Reference -> [Load(1,lv_var.slotNum);StoreIndirect(1,0)]
-                    //| LArrayElement(_,_) -> []
+                        | Value -> [Store(lv_var_slotNum, rv_reg)]
+                        | Reference -> [Load(1,lv_var_slotNum);StoreIndirect(1,0)]
+                    | LArrayElement(_,exprs) -> 
+                        let offset_expr = Decleration.Array.Offset.Expr(lv_var_decl, exprs)
+                        let offset_expr_reg = 1
+                        let offset_expr_attr = Expr.ExprAttr(offset_expr, offset_expr_reg, env)
+                        let offset_expr_code = offset_expr_attr.code
+                        let array_address_reg = 3
+                        offset_expr_code
+                        @
+                        [
+                        LoadAddress(array_address_reg,lv_var_slotNum)
+                        SubOffset(array_address_reg,array_address_reg,offset_expr_reg)
+                        StoreIndirect(array_address_reg, rv_reg)
+                        ]
                 [
                 comment_code
                 rv_code
@@ -747,7 +765,7 @@ module codegen =
                     let paramdef_typedef = ParameterDef.TypeDef(paramDef)
                     match paramdef_typedef with
                     | Single(_,_) -> 1
-                    | Array(_,_,ranges) -> Decleration.Array.SlotNum.Count(ranges)                
+                    | Array(_,_,ranges) -> Decleration.Array.Offset.Int(ranges)                
                     )
                 |> List.reduce (fun n1 n2 -> n1 + n2)
 
@@ -772,7 +790,7 @@ module codegen =
                 | Single(datatype,id) -> 
                     ParameterDef.Single.Code(id, reg, env)
                 | Array(datatype,id,ranges) ->
-                    let slotNums = Decleration.Array.SlotNum.Count(ranges)
+                    let slotNums = Decleration.Array.Offset.Int(ranges)
                     [for i in 0..slotNums -> i]
                     |> List.map(fun i ->
                         let varName = 
