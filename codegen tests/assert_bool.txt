@@ -1,0 +1,41 @@
+   call main
+   halt
+main:
+# prologue
+   push_stack_frame 0
+# parameters
+# declerations
+# statements
+# InvokeProc
+   int_const r0, 1
+   int_const r1, 1
+   call assert_bool
+# epilogue
+   pop_stack_frame 0
+   return
+assert_bool:
+# prologue
+   push_stack_frame 2
+# parameters
+   store 0, r0
+   store 1, r1
+# declerations
+# statements
+# write
+   string_const r0, "The expecting value is:"
+   call_builtin print_string
+# write
+   load r0, 0
+   call_builtin print_bool
+# write
+   string_const r0, " , Result:"
+   call_builtin print_string
+# write
+   load r0, 1
+   call_builtin print_bool
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# epilogue
+   pop_stack_frame 2
+   return

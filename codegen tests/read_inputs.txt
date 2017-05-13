@@ -1,0 +1,54 @@
+   call main
+   halt
+main:
+# prologue
+   push_stack_frame 0
+# parameters
+# declerations
+# statements
+# InvokeProc
+   call read_inputs
+# epilogue
+   pop_stack_frame 0
+   return
+read_inputs:
+# prologue
+   push_stack_frame 3
+# parameters
+# declerations
+   int_const r0, 0
+   store 0, r0
+   int_const r0, 0
+   store 1, r0
+   int_const r0, 0
+   store 2, r0
+# statements
+# write
+   string_const r0, "Input two positive integers to be added up: "
+   call_builtin print_string
+# read
+   call_builtin read_int
+   store 0, r0
+# read
+   call_builtin read_int
+   store 1, r0
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# assign
+   load r0, 0
+   load r1, 1
+   add_int r0, r0, r1
+   store 2, r0
+# write
+   string_const r0, "The result is: "
+   call_builtin print_string
+# write
+   load r0, 2
+   call_builtin print_int
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# epilogue
+   pop_stack_frame 3
+   return

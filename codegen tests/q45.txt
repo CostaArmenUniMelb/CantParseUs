@@ -1,0 +1,106 @@
+   call main
+   halt
+f:
+# prologue
+   push_stack_frame 10
+# parameters
+   store 0, r0
+   store 1, r1
+   store 2, r2
+   store 3, r3
+# declerations
+   int_const r0, 0
+   store 4, r0
+   int_const r0, 0
+   store 5, r0
+   int_const r0, 0
+   store 6, r0
+   int_const r0, 0
+   store 7, r0
+   int_const r0, 0
+   store 8, r0
+   int_const r0, 0
+   store 9, r0
+# statements
+# assign
+   int_const r0, 42
+   load r1, 0
+   int_const r2, 1
+   sub_int r1, r1, r2
+   int_const r2, 3
+   mul_int r1, r1, r2
+   load r2, 1
+   int_const r3, 2
+   sub_int r2, r2, r3
+   int_const r3, 1
+   mul_int r2, r2, r3
+   add_int r1, r1, r2
+   load_address r3, 4
+   sub_offset r3, r3, r1
+   store_indirect r3, r0
+# assign
+   load r0, 0
+   int_const r1, 1
+   sub_int r0, r0, r1
+   int_const r1, 3
+   mul_int r0, r0, r1
+   load r1, 1
+   int_const r2, 2
+   sub_int r1, r1, r2
+   int_const r2, 1
+   mul_int r1, r1, r2
+   add_int r0, r0, r1
+   load_address r1, 4
+   sub_offset r1, r1, r0
+   load_indirect r0, r1
+   load r1, 2
+   int_const r2, 1
+   sub_int r1, r1, r2
+   int_const r2, 3
+   mul_int r1, r1, r2
+   load r2, 3
+   int_const r3, 2
+   sub_int r2, r2, r3
+   int_const r3, 1
+   mul_int r2, r2, r3
+   add_int r1, r1, r2
+   load_address r3, 4
+   sub_offset r3, r3, r1
+   store_indirect r3, r0
+# write
+   load r0, 2
+   int_const r1, 1
+   sub_int r0, r0, r1
+   int_const r1, 3
+   mul_int r0, r0, r1
+   load r1, 3
+   int_const r2, 2
+   sub_int r1, r1, r2
+   int_const r2, 1
+   mul_int r1, r1, r2
+   add_int r0, r0, r1
+   load_address r1, 4
+   sub_offset r1, r1, r0
+   load_indirect r0, r1
+   call_builtin print_int
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# epilogue
+   pop_stack_frame 10
+   return
+main:
+# prologue
+   push_stack_frame 0
+# parameters
+# declerations
+# statements
+# InvokeProc
+   int_const r0, 2
+   int_const r1, 3
+   int_const r2, 1
+   int_const r3, 4
+   call f
+# epilogue
+   pop_stack_frame 0
+   return
