@@ -9,6 +9,59 @@ open Snick_ast
 
 exception Syntax_error of string;;
 
+
+
+
+let init_main_tbl  =
+	let symbol_tbl = Hashtbl.create 1024 in
+	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n"),Expr_None)]) )in 
+	(* Define type by adding a value as a dummy, then remove it (if don't do this the Ocaml compiler won't compile this) *)
+	Hashtbl.add symbol_tbl "dummy" dummy_data ;
+	Hashtbl.remove symbol_tbl "dummy" ;
+	let main_sym_tbl =  Hashtbl.create 1024 in
+	Hashtbl.add main_sym_tbl "dummy" symbol_tbl;
+	Hashtbl.remove main_sym_tbl "dummy" ;
+	main_sym_tbl;
+;;
+
+let add_tbl main_sym_tbl tbl_name =
+	let my_hash = Hashtbl.create 1024 in
+(* 	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n"),Expr_None)]) )in 
+
+	Hashtbl.add my_hash "dummy" dummy_data ;
+	Hashtbl.remove my_hash "dummy" ; *)
+
+	Hashtbl.add main_sym_tbl tbl_name my_hash;
+;;
+
+let insert_symbol_to_tbl main_sym_tbl tbl_name id symbol_object =
+	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
+	Hashtbl.add target_tbl id symbol_object;
+;;
+
+let exist_symbol main_sym_tbl tbl_name id  =
+	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
+	Hashtbl.mem target_tbl id;
+;;
+
+let find_symbol main_sym_tbl tbl_name id  =
+	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
+	Hashtbl.find target_tbl id;
+;;
+
+let get_list main_sym_tbl tbl_name = 
+	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
+	let a = [] in
+	let f s elem =
+	    (s,elem)::a;
+	    (* Printf.printf "Sym_VAL element %s ,val %s\n" s elem; *)
+	    ();
+	    in
+	    Hashtbl.iter f target_tbl;
+	  a;
+;;
+
+
 (* ----Debugging---- *)
 
 let debugging = true;;
@@ -94,7 +147,6 @@ let get_op_type op =
 ;;
 
 
-
 (* ----END Type management---- *)
 
 (* ----Error raising----*)
@@ -171,6 +223,7 @@ let raise_main_mustnothave_params dummy =
 (*For keeping the current parsing procedure name (we define current_tblname = procedure name)*)
 (*It changes every time we read a new procedure*)
 let current_tblname = ref "";;
+let main_tbl = init_main_tbl;;
 
 let get_tblname tbl_type =
 	match tbl_type with
@@ -185,8 +238,8 @@ let set_current_tbl tblname =
 
 (* Three possible object types, Param, Proc, Invoke *)
 let insert_symbol tbl_type id obj =
-	(* Snick_symbol.insert (get_tblname tbl_type) id obj; *)
-	();
+	insert_symbol_to_tbl main_tbl (get_tblname tbl_type) id obj;
+	(* (); *)
 ;;
 
 (* ----END Symbol table management----*)
@@ -194,17 +247,20 @@ let insert_symbol tbl_type id obj =
 (* ----Utility----*)
 
 let check_exist tbl_type id =
+	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
 
-(* 	if ! (Snick_symbol.exist (get_tblname tbl_type) id) then
-		raise_not_exist id; *)
+	if not sym then
+		raise_not_exist id;
 	();
 ;;
 
 let check_not_exist tbl_type id =
+	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
 
-(* 	if (Snick_symbol.exist (get_tblname tbl_type) id) then
-		raise_already_exist id; *)
+	if sym then
+		raise_already_exist id;
 	();
+
 ;;
 
 (* Check type and trhow type mis match error base on the assign_or_param value 
@@ -232,14 +288,18 @@ let init_prog =
 	 debugmsg "Initiated";
 	 (* Add symbol tbls for Proc and invoke *)
 
-(* 	 Snick_symbol.add_table (get_tblname Proc);
-	 Snick_symbol.add_table (get_tblname Invoke); *)
+	 add_tbl main_tbl (get_tblname Proc);
+	 add_tbl main_tbl (get_tblname Invoke);
+
+	 debugmsg "Initiated success";
 ;; 
 
 (* The last function to run for checking "main" procedure and checking invoked procedures*)
 let finalize_prog prog =
+
 	(* Check if "main" proc exist *)
 	check_exist Proc "main";
+
 	(* 1. if main exist, check param*)
 
 (* 	let main = (Snick_symbol.find Proc "main") in
@@ -279,19 +339,30 @@ let finalize_prog prog =
 	prog;
 ;;
 
-let check_proc proc =
-	let proc_id = (get_proc_id proc) in
+let add_proc proc_id=
+	debugmsg "Adding Proc\n";
+
 	check_not_exist Proc proc_id;
 	debugmsg ("Insert new proc " ^ proc_id ^ "\n");
 
 	(* Add the new sym table for this proc*)
-	(* Snick_symbol.add_table proc_id ; *)
+	add_tbl main_tbl proc_id ;
 
 	(* Set  this proc to the current proc*)
 	set_current_tbl proc_id;
 
+	debugmsg "Adding Proc success\n";
+;;
+(* Run check proc before if parse other part *)
+let check_proc proc =
+	let proc_id = (get_proc_id proc) in
+	debugmsg "Checking Proc";
+
+
 	(* insert this proc info to the Proc table*)
-	insert_symbol Proc proc_id proc;
+	insert_symbol Proc proc_id (Proc_symbol proc);
+
+	debugmsg "Checking Proc success";
 	proc;
 ;;
 
@@ -328,14 +399,16 @@ let check_invoke invoke =
 	match invoke with
 	| InvokeProc (id, exprs) ->
 		debugmsg ("Insert invoked proc " ^ id ^ "\n");
-		insert_symbol Invoke id invoke;
+		insert_symbol Invoke id (Invoke_symbol invoke);
 		invoke;
 
 	|_ -> invoke;
 ;;
 
 let check_lvalue lvalue =
+	debugmsg ("Checking lvalue " ^  (get_lvalue_id lvalue));
 	check_exist Current (get_lvalue_id lvalue);
+
 	(* check if the input is array with exprs, the expr_type of all exprs must be int only*)
 	match lvalue with
   	| LArrayElement (id , expr_list) ->
@@ -419,22 +492,26 @@ the params can be REF or VAL while the dec is only VAL *)
 let check_param param =
 	let (reftype, typedef,expr_type) = param in
 	let id = (get_typedef_id typedef) in
+	debugmsg "Checking param\n"; 
 	check_not_exist Current id;
 	(* save to symbol table*)
-	insert_symbol Current id (reftype, typedef, get_expr_type_for_typedef typedef);
+	insert_symbol Current id (Param_symbol(reftype, typedef, get_expr_type_for_typedef typedef) );
 
+	debugmsg "Checking param success\n"; 
 	(reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
 
 let check_dec dec =
 	let (typedef,expr_type) = dec in
 	let id = (get_typedef_id typedef) in
+	debugmsg "Checking dec\n"; 
 	check_not_exist Current id;
 	(* Check array size *)
 	check_typedef_range typedef;
 	(* cast to param and save to symbol table*)
-	insert_symbol Current id (Value, typedef,get_expr_type_for_typedef typedef);
-	(* return dec*)
+	insert_symbol Current id (Param_symbol(Value, typedef,get_expr_type_for_typedef typedef));
+
+	debugmsg "Checking dec success\n"; 
 	(typedef, get_expr_type_for_typedef typedef);
 ;;
 
@@ -447,4 +524,8 @@ let assign_expr eunop =
 ;;
 
 (* ----END Functions for parser----*)
+
+
+
+
 

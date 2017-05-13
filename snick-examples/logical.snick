@@ -1,5 +1,6 @@
 proc logical(val int myval)
-
+	int a;
+	int b;
 	a:=- 99;
 
 	a:=- (99 - 888);

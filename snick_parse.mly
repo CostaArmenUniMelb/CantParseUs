@@ -8,6 +8,8 @@ It defines
 %{
 open Snick_ast
 open Snick_analyze
+
+let main_tbl = Snick_analyze.init_main_tbl;;
 %}
 
 /*Variables*/
@@ -77,7 +79,10 @@ procedures:
   | procedure { [$1] }
 
 procedure:
-  | PROC IDENT LPAREN parameter_defs RPAREN procedure_body END { Snick_analyze.check_proc ( $2, List.rev $4, $6 ) }
+  | PROC procedure_define LPAREN parameter_defs RPAREN procedure_body END {add_proc($2); Snick_analyze.check_proc ( $2, List.rev $4, $6 )  }
+
+procedure_define:
+  | IDENT {add_proc($1); $1;}
 
 procedure_body:
   | declerations statements { ( List.rev $1, List.rev $2 ) }

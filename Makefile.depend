@@ -1,6 +1,6 @@
 snick_ast.cmi :
 snick_analyze.cmi : snick_ast.cmi
-snick_parse.cmi : snick_ast.cmi snick_analyze.cmi
+snick_parse.cmi : snick_ast.cmi 
 snick_pprint.cmi : snick_ast.cmi
 snick_ast.cmo : snick_ast.cmi
 snick_ast.cmx : snick_ast.cmi
