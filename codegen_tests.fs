@@ -215,7 +215,7 @@ module Tests =
             )
             assert_float_proc
             ]
-            //|> codegen.Generate
+            ////|> codegen.Generate
 
         let assert_int_proc = 
             (
@@ -362,12 +362,11 @@ module Tests =
             (
             "main"
             ,
-            [] //params
+            []
             ,
             (
-            [] //decls
+            []
             ,
-            //stmts
             [
             InvokeProc("if_else",[])
             ] 
@@ -505,7 +504,7 @@ module Tests =
             array_process_proc
             assert_int_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
 
         let simple_decleration_proc =
             (
@@ -560,21 +559,66 @@ module Tests =
             assert_bool_proc
             assert_float_proc
             ]
-            |> codegen.Generate
+            //|> codegen.Generate
 
+        let main =
+            [
+            (
+            "main"
+            ,
+            []
+            ,
+            (
+            [
+            Single(Int,"a")
+            Single(Int,"b")
+            ]
+            ,
+            [
+            Assign(LId("a"),Rexpr(Eint(3)))
+            Assign(LId("b"),Rexpr(Eint(2)))
+
+            InvokeProc("test_ref",[Elval(LId("a")); Elval(LId("b"))])
+            InvokeProc("assert_int",[Eint(4); Elval(LId("b"))])
+            InvokeProc("assert_int",[Eint(12); Elval(LId("a"))])
+
+            InvokeProc("simple_decleration",[Eint(2); Efloat(3.5); Ebool(true)])
+
+            InvokeProc("array_process",[])
+            InvokeProc("math_operation",[])
+            InvokeProc("logic_operation",[])
+            InvokeProc("if_else",[])
+            InvokeProc("do_while",[])
+            InvokeProc("read_inputs",[])
+            ]
+            )
+            )
+            test_ref_proc
+            assert_int_proc
+            assert_bool_proc
+            assert_float_proc
+            simple_decleration_proc
+            array_process_proc
+            math_operation_proc
+            logic_operation_proc
+            if_else_proc
+            do_while_proc
+            read_inputs_proc
+            write_bool_proc
+            ]
+            |> codegen.Generate
 
     
     module Assignment =
         let assignment_gcd =
             [
             (
-            "main" //identifier
+            "main"
             ,
-            [] //parameter_def list
+            []
             ,
             (
             [
-            //declerations
             Single(Int,"x")
             Single(Int,"y")
             Single(Int,"temp")
@@ -583,7 +627,6 @@ module Tests =
             ]
             ,
             [
-            //statements
             Write(Estring("Input two positive integers: "))
             Read(LId("x"))
             Read(LId("y"))
