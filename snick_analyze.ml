@@ -10,17 +10,58 @@ open Snick_ast
 exception Syntax_error of string;;
 exception Dev_error of string;;
 
+(* Raise the syntazx error*)
 let raise_syn_err msg = 
-	raise(Syntax_error  (msg) );
+	raise ( Syntax_error (msg) );
 ;;
 
+(* Raise the developer error, if this is thrown then there is something wrong with the code*)
 let raise_dev_err msg = 
-	raise(Dev_error  (msg) );
+	raise ( Dev_error (msg) );
 ;;
+
+(* ----Debugging---- *)
+
+let debugging = true;; (*Allow showing debug msgs*)
+
+(* Show  some messages for debugging *)
+let debugmsg msg = 
+	if debugging then 
+		print_string msg;
+;;
+
+(* Convert op to string for showing *)
+let op_to_string op = 
+	match op with
+	| Op_add  -> "Op_add"
+	| Op_sub  -> "Op_sub"
+	| Op_mul  -> "Op_mul"
+	| Op_div -> "Op_div"
+	| Op_eq  -> "Op_eq"
+	| Op_lt -> "Op_lt"
+	| Op_or   -> "Op_or"
+	| Op_and -> "Op_and"
+ 	| Op_not_eq -> "Op_not_eq"
+	| Op_lt_eq -> "Op_lt_eq"
+	| Op_gt -> "Op_gt"
+	| Op_gt_eq -> "Op_gt_eq"
+;;	
+
+(* Convert the expression type to string. For raise error and debugging only *)
+let expr_type_tostring expr_type=
+	match  expr_type with
+	| Expr_Bool -> "Bool"
+	| Expr_Int -> "Int"
+	| Expr_Float -> "Float"
+	| Expr_String -> "String"
+	| Expr_None -> "None"
+;;
+
+(* ----END Debugging---- *)
 
 (* ----Symbol table---- *)
 
-let hash_size = 1024;;(* set Maximum size to 1024 values *)
+let hash_size = 1024;;(* set maximum size to 1024 values *)
 
 (* Create and return the default structure of the table 
 One main Hashtbl store all symbol tables (other Hashtbl or let's say Hash in Hash)*)
@@ -72,83 +113,50 @@ let get_list main_sym_tbl tbl_name =
 
 (* ----END Symbol table---- *)
 
-(* ----Debugging---- *)
-
-let debugging = true;;
-
-(* Show  some messages for debugging *)
-let debugmsg msg = 
-	if debugging then 
-		print_string msg;
-;;
-
-let op_to_string op = 
-	match op with
-	| Op_add  -> "Op_add"
-	| Op_sub  -> "Op_sub"
-	| Op_mul  -> "Op_mul"
-	| Op_div -> "Op_div"
-	| Op_eq  -> "Op_eq"
-	| Op_lt -> "Op_lt"
-	| Op_or   -> "Op_or"
-	| Op_and -> "Op_and"
- 	| Op_not_eq -> "Op_not_eq"
-	| Op_lt_eq -> "Op_lt_eq"
-	| Op_gt -> "Op_gt"
-	| Op_gt_eq -> "Op_gt_eq"
-;;	
-
-(* ----END Debugging---- *)
-
 (* ----Type management---- *)
-
+(* Get the expr_type from a expression*)
 let get_expr_type_for_expr expr =
 	match expr with
-	  | Estring (string, expr_type)-> expr_type
-	  | Ebool (bool, expr_type)-> expr_type
-	  | Eint (int, expr_type)-> expr_type
-	  | Efloat (float, expr_type)-> expr_type
-	  | Elval (lvalue, expr_type)-> expr_type
-	  | Ebinop (expr1, binop, expr2, expr_type)-> expr_type
-	  | Eunop (unop, expr, expr_type)-> expr_type
-	  | Eparens (expr, expr_type)-> expr_type
+	| Estring (string, expr_type)-> expr_type
+	| Ebool (bool, expr_type)-> expr_type
+	| Eint (int, expr_type)-> expr_type
+	| Efloat (float, expr_type)-> expr_type
+	| Elval (lvalue, expr_type)-> expr_type
+	| Ebinop (expr1, binop, expr2, expr_type)-> expr_type
+	| Eunop (unop, expr, expr_type)-> expr_type
+	| Eparens (expr, expr_type)-> expr_type
 ;;
 
-(* Convert the expression type to string. For raise error and debugging only *)
-let expr_type_tostring expr_type=
-	match  expr_type with
-	  | Expr_Bool -> "Bool"
-	  | Expr_Int -> "Int"
-	  | Expr_Float -> "Float"
-	  | Expr_String -> "String"
-	  | Expr_None -> "None"
-;;
-
+(* Get the expr_type from a datatype*)
 let get_expr_type_for_datatype datatype =
 	match datatype with
-		| Bool -> Expr_Bool
-	  	| Int -> Expr_Int
-	  	| Float -> Expr_Float
+	| Bool -> Expr_Bool
+  	| Int -> Expr_Int
+  	| Float -> Expr_Float
 ;;
 
+(* Get the expr_type from a typedef*)
 let get_expr_type_for_typedef typedef =
 	match typedef with
-		|Single (datatype,id) -> get_expr_type_for_datatype datatype
-		|Array (datatype,id,ranges) -> get_expr_type_for_datatype datatype
+	| Single (datatype, id) -> get_expr_type_for_datatype datatype
+	| Array (datatype, id, ranges) -> get_expr_type_for_datatype datatype
 ;;
 
+(* Get the Param from the Param symbol*)
 let get_param_from_sym_tbl param =
 	match param with
 	| Param_symbol parameter_def-> parameter_def;
 	| _ -> raise_dev_err "get_param_from_sym_tbl : type is not param"; 
 ;;
 
-let get_proc_from_sym_tbl param =
-	match param with
-	| Proc_symbol proc-> proc;
+(* Get the Proc from the Proc symbol*)
+let get_proc_from_sym_tbl proc =
+	match proc with
+	| Proc_symbol proc_p-> proc_p;
 	| _ -> raise_dev_err "get_proc_from_sym_tbl : type is not proc"; 
 ;;
 
+(* Get Invoked Proc from the Invoke symbol*)
 let get_invoke_from_sym_tbl invoke =
 	match invoke with
 	| Invoke_symbol stmt-> 
@@ -159,84 +167,95 @@ let get_invoke_from_sym_tbl invoke =
 	| _ -> raise_dev_err "get_invoke_from_sym_tbl : type is not invoke"; 
 ;;
 
+(* Get the expr_type from a Param*)
 let get_expr_type_for_param param =
 	let (reftype, typedef,expr_type) = param in
 	get_expr_type_for_typedef typedef;
 ;;
 
+(* Get the expr_type from a Lvalue*)
 let get_expr_type_for_lvalue lvalue =
 	match lvalue with
 	| LId(id,expr_type) -> expr_type
-  	| LArrayElement (id , expr_list,expr_type) ->expr_type
+  	| LArrayElement (id , expr_list, expr_type) ->expr_type
 ;;
 
+(* Get the typedef id from a typedef*)
 let get_typedef_id typedef =
 	match typedef with
-		|Single (datatype,id) -> id
-		|Array (datatype,id,ranges) -> id
+	| Single (datatype,id) -> id
+	| Array (datatype, id, ranges) -> id
 ;;
 
+(* Get the proc id from a proc*)
 let get_proc_id proc =
 	let (identifier , parameter_def_list , procedure_body) = proc in
 	identifier;
 ;;
 
+(* Get the lvalue id from a lvalue*)
 let get_lvalue_id lvalue =
 	match lvalue with
-	| LId(id,_) -> id
-  	| LArrayElement (id , expr_list,_) ->id
+	| LId(id, _) -> id
+  	| LArrayElement (id , expr_list, _ ) ->id
 ;;
 
+(* Get the expression from a rvalue*)
 let get_rvalue_expr rvalue =
 	let Rexpr(expr) = rvalue in
 	expr;
 ;;
 
+(* Get the ranges from a param*)
 let get_ranges_from_param param =
 	let (passby , type_def , expr_type)= param in
 	match type_def with
-	|Array (datatype,id,ranges) -> List.rev ranges;
+	| Array (datatype,id,ranges) -> List.rev ranges;
 	| _ -> [];
 ;;
 
+(* Return true if it is an array*)
 let is_lvalue_array lvalue =
 	match lvalue with
 	| LId(id,_) -> false
-  	| LArrayElement (id , expr_list,_) ->true
+  	| LArrayElement (id , expr_list, _) -> true
 ;;
+
+(* Return true if it is an array*)
 let is_param_array param =
 	let (reftype, typedef,expr_type) = param in
 	match typedef with
-	| Single  (datatype , identifier) ->false
-  	| Array  (datatype, identifier , range_list)->true
+	| Single  (datatype , identifier) -> false
+  	| Array  (datatype, identifier , range_list) -> true
 ;;
 
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
-		|Op_add | Op_sub |Op_mul |Op_div -> Op_type_math_to_math
-		|Op_lt |Op_gt |Op_lt_eq |Op_gt_eq-> Op_type_math_to_bool
-		|Op_and |Op_or  -> Op_type_bool_to_bool
-		|Op_eq |Op_not_eq -> Op_type_both_to_bool
+	| Op_add | Op_sub | Op_mul | Op_div -> Op_type_math_to_math
+	| Op_lt | Op_gt | Op_lt_eq | Op_gt_eq -> Op_type_math_to_bool
+	| Op_and | Op_or -> Op_type_bool_to_bool
+	| Op_eq | Op_not_eq -> Op_type_both_to_bool
 ;;
 
 (* ----END Type management---- *)
 
 (* ----Error raising----*)
+(*Raise and show appropriate errors for different error types*)
 
 let raise_assign_type_mismatch expr_type1 expr_type2 = 
 	raise_syn_err (sprintf "Assigning Type Mismatch: cannot assign %s to %s" 
-				(expr_type_tostring expr_type2)
-				(expr_type_tostring expr_type1)
-			); 
+						(expr_type_tostring expr_type2)
+						(expr_type_tostring expr_type1)
+					); 
 ;;
 
 let raise_invok_param_type_mismatch invokeid expr_type1 expr_type2 = 
 	raise_syn_err (sprintf "The formal and actual parameter type mismatch for procedure '%s'.Expected %s but the actual is %s" 
-				invokeid
-				(expr_type_tostring expr_type1)
-				(expr_type_tostring expr_type2)
-			); 
+						invokeid
+						(expr_type_tostring expr_type1)
+						(expr_type_tostring expr_type2)
+					); 
 ;;
 
 let raise_invalid_arraysize min max =
@@ -271,7 +290,7 @@ let raise_not_exist id =
 ;;
 
 let raise_already_exist id =
-	raise_syn_err (sprintf "'%s' has been declared" id);
+	raise_syn_err (sprintf "'%s' has been already declared" id);
 ;;
 
 let raise_zero_division dummy =
@@ -279,17 +298,17 @@ let raise_zero_division dummy =
 ;;
 
 let raise_expect_bool expr =
-	raise_syn_err (sprintf "The expected expression type must be Boolean but the current expression is %s" 
+	raise_syn_err (sprintf "The expected expression type must be Boolean but the actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_int expr =
-	raise_syn_err (sprintf "The expected expression type must be Int but the current expression is %s" 
+	raise_syn_err (sprintf "The expected expression type must be Int but the actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_math expr =
-	raise_syn_err (sprintf "The expected expression type must be Int or float but the current expression is %s" 
+	raise_syn_err (sprintf "The expected expression type must be Int or float but the actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
@@ -303,9 +322,9 @@ let raise_main_mustnothave_params dummy =
 
 (*For keeping the current parsing procedure name (we define current_tblname = procedure name)*)
 (*It changes every time we read a new procedure*)
-let current_tblname = ref "";;
-let main_tbl = init_main_tbl;;
-
+let current_tblname = ref "" ;;
+let main_tbl = init_main_tbl ;;
+(* The table name for Proc and Invoke symbol tables are always static and have only one for each *)
 let get_tblname tbl_type =
 	match tbl_type with
 	  | Proc -> "proc"
@@ -313,6 +332,7 @@ let get_tblname tbl_type =
 	  | Current -> !current_tblname
 ;;
 
+(* The current symbol table changes everytime we add a new procedure *)
 let set_current_tbl tblname =
 	current_tblname := tblname;
 ;;
@@ -320,18 +340,20 @@ let set_current_tbl tblname =
 (* Three possible object types, Param, Proc, Invoke *)
 let insert_symbol tbl_type id obj =
 	insert_symbol_to_tbl main_tbl (get_tblname tbl_type) id obj;
-	(* (); *)
 ;;
 
+(* get a symbol from a symbol table *)
 let get_symbol tbl_type id =
 	find_symbol main_tbl (get_tblname tbl_type) id;
 ;;
 
+(* Get all symbols in a symbol table *)
 let get_symbol_list tbl_type =
 	(get_list main_tbl (get_tblname tbl_type));
 ;;
 
-let get_main_sym_tbl  =
+(* Return the main table to the caller *)
+let get_main_sym_tbl =
 	main_tbl;
 ;;
 
@@ -339,23 +361,22 @@ let get_main_sym_tbl  =
 
 (* ----Utility----*)
 
+(* Check if an id(string) exist in a symbol table *)
 let check_exist tbl_type id =
 	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
-
 	if not sym then
 		raise_not_exist id;
 ;;
-
+(* Check if an id(string) does not exist in a symbol table *)
 let check_not_exist tbl_type id =
 	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
-
 	if sym then
 		raise_already_exist id;
 ;;
 
 (* Check type and trhow type mis match error base on the assign_or_param value 
-	0 for assign
-	1 for param checking*)
+	0 for assigning
+	1 for param checking when invoking*)
 let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
 	(* Possible invlid assign
 	-float cannot be assigned to int 
@@ -369,6 +390,29 @@ let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
 		else
 			raise_invok_param_type_mismatch id lexpr_type rexpr_type
 		;
+;;
+
+(* Check if the expr has the type bool, used in IF and While *)
+let check_expr_bool expr  =
+	if get_expr_type_for_expr expr != Expr_Bool then
+		raise_expect_bool expr;
+	expr;
+;;
+
+(* Check whether the array size is valid when define*)
+let check_typedef_range ttypedef =
+ 	match ttypedef with
+	| Array (datatype,identifier,range_list) -> 
+		for i = 0 to List.length(range_list) -1  do 
+			let range =(List.nth range_list i)in
+			let (min,max) = range in
+			debugmsg (sprintf "Array size %d %d\n" min max) ;
+			if min < 0 || max <0 || min > max then
+				raise_invalid_arraysize min max; 
+		done;
+		
+	| _ -> ();
+	;
 ;;
 
 (* ----END Utility----*)
@@ -392,7 +436,6 @@ let finalize_prog prog =
 	check_exist Proc "main";
 
 	(* 1. if main exist, check param*)
-
 	let main = (get_symbol Proc "main") in
 	let (id,params,proc_body) = get_proc_from_sym_tbl main in
 	if List.length (params) >0 then
@@ -405,7 +448,7 @@ let finalize_prog prog =
 	debugmsg (sprintf "Num of func %d\n" num_of_invoke);
 
 	for i = 0 to List.length(invoke_list) - 1  do 
-		debugmsg (sprintf "check proc index %d\n" i);
+		debugmsg (sprintf "Check proc index %d\n" i);
  		let (invoke_sym_id,invoke_sim_object) = (List.nth invoke_list i) in
  		match  get_invoke_from_sym_tbl invoke_sim_object with
 
@@ -437,6 +480,7 @@ let finalize_prog prog =
 	prog;
 ;;
 
+(* Add a new symbol table for a procedure and update the current procedure *)
 let add_proc proc_id=
 	debugmsg "Adding Proc\n";
 
@@ -452,7 +496,7 @@ let add_proc proc_id=
 	debugmsg "Adding Proc success\n";
 ;;
 
-(* Run check proc before if parse other part *)
+(* Checking procedure, insert the Proc to the Proc symbol table *)
 let check_proc proc =
 	let proc_id = (get_proc_id proc) in
 	debugmsg (sprintf "Checking Proc %s\n" proc_id);
@@ -464,6 +508,7 @@ let check_proc proc =
 	proc;
 ;;	
 
+(* Check if the types for LHS and RHS are matched*)
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
  	match assign with
@@ -472,18 +517,17 @@ let check_assign assign =
 		let param = get_param_from_sym_tbl (get_symbol Current lid) in
 		let lexpr_type =  get_expr_type_for_param  param in
 		let rexpr_type = get_expr_type_for_expr (get_rvalue_expr rvalue) in
-		(*check if param is exist*)
-		check_exist Current lid;
-		(* Check type match*)
 
+		(* Check type match*)
 		check_lhs_rhs_type_match lid lexpr_type rexpr_type 0;
 
-	| _ -> raise_dev_err "invalid match";
+	| _ -> raise_dev_err "Invalid match";
 	;
 	assign; 
 
 ;;
 
+(* Store the invoked procedure and the param to the Invoke symbol table for checking later*)
 let check_invoke invoke =
 	(* We can't really check the invoked procedure since all procedures have not been declard yet.
 	 All we can do is the save them in the symbol table and wait until we have already read all procedures
@@ -492,11 +536,12 @@ let check_invoke invoke =
 	| InvokeProc (id, exprs) ->
 		debugmsg ("Insert invoked proc " ^ id ^ "\n");
 		insert_symbol Invoke id (Invoke_symbol invoke);
-		invoke;
-
-	|_ -> invoke;
+	| _ -> ();
+	;
+	invoke;
 ;;
 
+(* Check if the id of lvalue exists and the index if it is an array*)
 let check_lvalue lvalue =
 	let lid =  (get_lvalue_id lvalue) in 
 	debugmsg ("Checking lvalue " ^ lid ^"\n");
@@ -526,7 +571,6 @@ let check_lvalue lvalue =
 		if num_of_lval_indices !=num_of_param_indices then
 			raise_num_of_indices_mismatch num_of_param_indices num_of_lval_indices ;
 
-		
 		for i = 0 to List.length(expr_list) - 1  do 
 			let expr = (List.nth expr_list i) in
 			(* check if the expr_type of all exprs must be int only*)
@@ -547,14 +591,7 @@ let check_lvalue lvalue =
 	| LId (id,_) ->  LId (id,paramtype);
 ;;
 
-(* Check if the expr has the type bool, used in IF and While *)
-let check_expr_bool expr  =
-	if get_expr_type_for_expr expr != Expr_Bool then
-		raise_expect_bool expr;
-	expr;
-;;
-
-(* check and assign expr type for Ebinop operations *)
+(* Check and assign expr type for Ebinop operations *)
 let check_expr_op expr  =
 	debugmsg "Checking exp op\n";
 	match expr with
@@ -569,12 +606,12 @@ let check_expr_op expr  =
 		if !optype  = Op_type_both_to_bool then
 			if expr_type1 == Expr_Int || expr_type1 == Expr_Float then
 				optype := Op_type_math_to_bool
-			else
-				 if expr_type1 == Expr_Bool then
-					optype := Op_type_bool_to_bool
+			else if expr_type1 == Expr_Bool then
+				optype := Op_type_bool_to_bool
 		;
 
-		debugmsg (sprintf "Checking exp, expr_type1=%s expr_type2=%s\n" (expr_type_tostring expr_type1)  (expr_type_tostring expr_type2));
+		debugmsg (sprintf "Checking exp, expr_type1=%s expr_type2=%s\n" 
+			(expr_type_tostring expr_type1)  (expr_type_tostring expr_type2));
 
 		match !optype with
 		| Op_type_math_to_math | Op_type_math_to_bool -> 
@@ -605,7 +642,7 @@ let check_expr_op expr  =
 				(* for some operations such as lt ,gt the result must be bool*)
 				Ebinop (expr1,op,expr2,Expr_Bool);
 
-			| _ -> Ebinop (expr1,op,expr2,Expr_None);
+			| _ -> raise_dev_err "Invalid op type match";
 			;
 
 		| Op_type_bool_to_bool -> 
@@ -620,28 +657,13 @@ let check_expr_op expr  =
 	| _ -> expr;
 ;;
 
-(* check whether the array size is valid when define*)
-let check_typedef_range ttypedef =
- 	match ttypedef with
-		| Array (datatype,identifier,range_list) -> 
-			for i = 0 to List.length(range_list) -1  do 
-				let range =(List.nth range_list i)in
-				let (min,max) = range in
-				debugmsg (sprintf "Array size %d %d\n" min max) ;
-				if min < 0 || max <0 || min > max then
-					raise_invalid_arraysize min max; 
-			done;
-			
-		| _ -> ();
-		;
-;;
-
-(* The differences between dec and param is 
-the params can be REF or VAL while the dec is only VAL *)
+(* Check if Param exists and then add to the current symbol table *)
 let check_param param =
 	let (reftype, typedef,expr_type) = param in
 	let id = (get_typedef_id typedef) in
+
 	debugmsg (sprintf "Checking Param %s\n" id ); 
+
 	check_not_exist Current id;
 	(* save to symbol table*)
 	insert_symbol Current id (Param_symbol(reftype, typedef, get_expr_type_for_typedef typedef) );
@@ -650,11 +672,17 @@ let check_param param =
 	(reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
 
+(* Check if declaration exists and then add convert to Param then add to the current symbol table *)
+(* The differences between dec and param is 
+	the params can be REF or VAL while the dec is only VAL 
+	and the dec can be an array*)
 let check_dec dec =
 	let (typedef,expr_type) = dec in
 	let id = (get_typedef_id typedef) in
 	let final_expr_type = get_expr_type_for_typedef typedef in
+
 	debugmsg (sprintf "Checking Dec %s\n" id );  
+
 	check_not_exist Current id;
 	(* Check array size *)
 	check_typedef_range typedef;

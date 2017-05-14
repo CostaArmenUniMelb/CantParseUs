@@ -70,13 +70,11 @@ let main_tbl = Snick_analyze.init_main_tbl;;
 
 %start program_with_sym_tbl
 %%
-/* Rules */
-/*Start from top to bottom*/
 
-/*Program is the top most rule*/
+/* Rules */
 
 program_with_sym_tbl:
-  | program {($1, Snick_analyze.get_main_sym_tbl)}
+  | program { ($1, Snick_analyze.get_main_sym_tbl) }
 
 program:
   | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ( $1 ) } 

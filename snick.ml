@@ -31,8 +31,8 @@ let main () =
   try
     let (prog,main_sym_tbl) = Snick_parse.program_with_sym_tbl Snick_lex.token lexbuf in
     match !mode with
-    | PrettyPrint ->print_string (Snick_pprint.print_program prog)
-    | Compile -> print_string ("Sorry, cannot generate code yet\n")
+    | PrettyPrint -> print_string (Snick_pprint.print_program prog)
+    | Compile -> print_string ("Waiting for Codegen...\n")
   with
     | Parsing.Parse_error -> Snick_lex.raise_parser_fail lexbuf 
     | Snick_analyze.Syntax_error _ as err -> let msg = Printexc.to_string err in Snick_lex.raise_syntax_fail lexbuf msg
