@@ -110,7 +110,7 @@ let get_expr_type_for_datatype datatype =
 	match datatype with
 		| Bool -> Expr_Bool
 	  	| Int -> Expr_Int
-	  	| Float -> Expr_String
+	  	| Float -> Expr_Float
 ;;
 
 let get_expr_type_for_typedef typedef =
@@ -169,9 +169,10 @@ let get_rvalue_expr rvalue =
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
-		|Op_add | Op_sub |Op_mul |Op_div -> Op_type_math
+		|Op_add | Op_sub |Op_mul |Op_div -> Op_type_math_to_math
 		|Op_lt |Op_gt |Op_lt_eq |Op_gt_eq-> Op_type_math_to_bool
-		|Op_and |Op_or |Op_eq |Op_not_eq -> Op_type_bool
+		|Op_and |Op_or  -> Op_type_bool_to_bool
+		|Op_eq |Op_not_eq -> Op_type_both_to_bool
 ;;
 
 
@@ -182,7 +183,7 @@ let get_op_type op =
 
 
 
-let raise_type_mismatch expr1 expr2 = 
+let raise_expr_type_mismatch expr1 expr2 = 
 	raise_syn_err (sprintf "Expression Type Mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type_for_expr expr1))
 				(expr_type_tostring (get_expr_type_for_expr expr2))
@@ -442,7 +443,7 @@ let check_lvalue lvalue =
 	(*assign expr_type*)
 	let param = get_param_from_sym_tbl (get_symbol Current lvalue_id) in
 	let paramtype = get_expr_type_for_param param in
-	debugmsg ("Param type " ^ (expr_type_tostring paramtype));
+	debugmsg ("Lvalue type " ^ (expr_type_tostring paramtype) ^"\n");
 	(* check if the input is array with exprs, the expr_type of all exprs must be int only*)
 	match lvalue with
   	| LArrayElement (id , expr_list, _) ->
@@ -466,12 +467,25 @@ let check_expr_bool expr  =
 let check_expr_op expr  =
 	match expr with
 	| Ebinop (expr1,op,expr2,expr_type) -> 
-		match get_op_type op with
-		| Op_type_math | Op_type_math_to_bool -> 
+		let optype = ref ( get_op_type op) in
+		let expr_type1 = (get_expr_type_for_expr expr1) in
+		let expr_type2 = (get_expr_type_for_expr expr2) in
+		(* if optype is both to bool (the = or != op), we have to decide
+		 whether it is Op_type_bool_to_bool or Op_type_math_to_bool *)
+		if !optype  = Op_type_both_to_bool then
+			if expr_type1 == Expr_Int || expr_type1 == Expr_Float then
+				optype := Op_type_math_to_bool
+			else
+				 if expr_type1 == Expr_Bool then
+					optype := Op_type_bool_to_bool
+		;
+
+		match !optype with
+		| Op_type_math_to_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
-			if (get_expr_type_for_expr expr1 != Expr_Int && get_expr_type_for_expr expr1 != Expr_Float) 
-			|| (get_expr_type_for_expr expr2 != Expr_Int && get_expr_type_for_expr expr2 != Expr_Float) then
-				raise_type_mismatch expr1 expr2;
+			if (expr_type1 != Expr_Int && expr_type1 != Expr_Float) 
+			|| (expr_type2 != Expr_Int && expr_type2 != Expr_Float) then
+				raise_expr_type_mismatch expr1 expr2;
 
 			(* Check divide by zero *)
 			if op == Op_div then
@@ -482,10 +496,10 @@ let check_expr_op expr  =
 	  		;
 
 	  		(* Set the expr type for the parent expr*)
-	  		match get_op_type op with
-	  		| Op_type_math ->
+	  		match !optype with
+	  		| Op_type_math_to_math ->
 				(* Set the expr type, if any is float then the parent is also float *)
-				if (get_expr_type_for_expr expr1 == Expr_Float || get_expr_type_for_expr expr2 == Expr_Float) then
+				if (expr_type1 == Expr_Float || expr_type2 == Expr_Float) then
 					Ebinop (expr1,op,expr2,Expr_Float)
 				else
 					Ebinop (expr1,op,expr2,Expr_Int)
@@ -493,13 +507,15 @@ let check_expr_op expr  =
 			| Op_type_math_to_bool ->
 				(* for some operations such as lt ,gt the result must be bool*)
 				Ebinop (expr1,op,expr2,Expr_Bool);
+
 			| _ -> Ebinop (expr1,op,expr2,Expr_None);
 			;
 
-		| Op_type_bool -> 
-			if get_expr_type_for_expr expr1 != Expr_Bool || get_expr_type_for_expr expr2 != Expr_Bool then
-				raise_type_mismatch expr1 expr2;
+		| Op_type_bool_to_bool -> 
+			if expr_type1 != Expr_Bool || expr_type2!= Expr_Bool then
+				raise_expr_type_mismatch expr1 expr2;
 			Ebinop (expr1,op,expr2,Expr_Bool);
+		| _ -> raise_dev_err "Invalid op type match";
 		;
 
 	| _ -> expr;
@@ -538,13 +554,14 @@ let check_param param =
 let check_dec dec =
 	let (typedef,expr_type) = dec in
 	let id = (get_typedef_id typedef) in
-	debugmsg "Checking dec\n"; 
+	let final_expr_type = get_expr_type_for_typedef typedef in
+	debugmsg (sprintf "Checking dec:%s\n" id); 
 	check_not_exist Current id;
 	(* Check array size *)
 	check_typedef_range typedef;
 	(* cast to param and save to symbol table*)
-	insert_symbol Current id (Param_symbol(Value, typedef,get_expr_type_for_typedef typedef));
-
+	insert_symbol Current id (Param_symbol(Value, typedef,final_expr_type));
+	debugmsg (sprintf "Dec Type %s\n" ( expr_type_tostring ( final_expr_type) ) ); 
 	debugmsg "Checking dec success\n"; 
 	(typedef, get_expr_type_for_typedef typedef);
 ;;

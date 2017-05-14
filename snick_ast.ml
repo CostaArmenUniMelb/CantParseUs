@@ -59,11 +59,13 @@ type unop =
 (* Op_type_math is the type that the parent and child expressions are int or float*)
 (* Op_type_bool isthe type that the parent and child expressions are bool*)
 (* Op_type_math_to_bool is the type that the child expressions are 
-  int or float but the parent must be bool*)
+  int or float but the parent must be bool
+Op_type_both_to_bool = the expression can be bool or math and the result is bool*)
 type op_type =
-  | Op_type_math 
-  | Op_type_bool
+  | Op_type_math_to_math 
+  | Op_type_bool_to_bool
   | Op_type_math_to_bool  
+  | Op_type_both_to_bool
     
 (*Left hand side of an assignment (variables
 and array elements can be assigned to). Note that an 
