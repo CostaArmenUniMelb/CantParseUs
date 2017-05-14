@@ -19,26 +19,23 @@ let raise_dev_err msg =
 ;;
 
 
+(* ----Symbol table---- *)
+let hash_size = 1024;;
 
 let init_main_tbl  =
-	let symbol_tbl = Hashtbl.create 1024 in
+	let symbol_tbl = Hashtbl.create hash_size in
 	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n",Expr_None),Expr_None)]) )in 
 	(* Define type by adding a value as a dummy, then remove it (if don't do this the Ocaml compiler won't compile this) *)
 	Hashtbl.add symbol_tbl "dummy" dummy_data ;
 	Hashtbl.remove symbol_tbl "dummy" ;
-	let main_sym_tbl =  Hashtbl.create 1024 in
+	let main_sym_tbl =  Hashtbl.create hash_size in
 	Hashtbl.add main_sym_tbl "dummy" symbol_tbl;
 	Hashtbl.remove main_sym_tbl "dummy" ;
 	main_sym_tbl;
 ;;
 
 let add_tbl main_sym_tbl tbl_name =
-	let symbol_tbl = Hashtbl.create 1024 in
-(* 	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n"),Expr_None)]) )in 
-
-	Hashtbl.add my_hash "dummy" dummy_data ;
-	Hashtbl.remove my_hash "dummy" ; *)
-
+	let symbol_tbl = Hashtbl.create hash_size in
 	Hashtbl.add main_sym_tbl tbl_name symbol_tbl;
 ;;
 
@@ -59,15 +56,15 @@ let find_symbol main_sym_tbl tbl_name id  =
 
 let get_list main_sym_tbl tbl_name = 
 	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
-	let a = [] in
+	let a = ref [] in
 	let f s elem =
-	    (s,elem)::a;
-	    (* Printf.printf "Sym_VAL element %s ,val %s\n" s elem; *)
-	    ();
+	    a:=List.append !a [(s,elem)];
 	    in
 	    Hashtbl.iter f target_tbl;
-	 a;
+	!a;
 ;;
+
+(* ----END Symbol table---- *)
 
 
 (* ----Debugging---- *)
@@ -131,6 +128,16 @@ let get_proc_from_sym_tbl param =
 	| _ -> raise_dev_err "get_proc_from_sym_tbl : type is not proc"; 
 ;;
 
+let get_invoke_from_sym_tbl invoke =
+	match invoke with
+	| Invoke_symbol stmt-> 
+		match stmt with
+		| InvokeProc (identifier , expr_list) -> InvokeProc (identifier , expr_list) ;
+		| _ -> raise_dev_err "get_invoke_from_sym_tbl : stmt type is not invoke"; 
+		;
+	| _ -> raise_dev_err "get_invoke_from_sym_tbl : type is not invoke"; 
+;;
+
 
 let get_expr_type_for_param param =
 	let (reftype, typedef,expr_type) = param in
@@ -180,9 +187,6 @@ let get_op_type op =
 
 (* ----Error raising----*)
 
-
-
-
 let raise_expr_type_mismatch expr1 expr2 = 
 	raise_syn_err (sprintf "Expression Type Mismatch: %s and %s" 
 				(expr_type_tostring (get_expr_type_for_expr expr1))
@@ -197,8 +201,9 @@ let raise_assign_type_mismatch expr_type1 expr_type2 =
 			); 
 ;;
 
-let raise_param_type_mismatch expr_type1 expr_type2 = 
-	raise_syn_err (sprintf "The formal and actual parameter type Mismatch: %s and %s" 
+let raise_invok_param_type_mismatch invokeid expr_type1 expr_type2 = 
+	raise_syn_err (sprintf "The formal and actual parameter type mismatch for procedure '%s'.Expected %s but the actual is %s" 
+				invokeid
 				(expr_type_tostring expr_type1)
 				(expr_type_tostring expr_type2)
 			); 
@@ -277,13 +282,16 @@ let get_symbol tbl_type id =
 	find_symbol main_tbl (get_tblname tbl_type) id;
 ;;
 
+let get_symbol_list tbl_type =
+	get_list main_tbl (get_tblname tbl_type);
+;;
+
 
 let check_exist tbl_type id =
 	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
 
 	if not sym then
 		raise_not_exist id;
-	();
 ;;
 
 let check_not_exist tbl_type id =
@@ -291,14 +299,12 @@ let check_not_exist tbl_type id =
 
 	if sym then
 		raise_already_exist id;
-	();
-
 ;;
 
 (* Check type and trhow type mis match error base on the assign_or_param value 
 	0 for assign
 	1 for param checking*)
-let check_lhs_rhs_type_match lexpr_type rexpr_type assign_or_param =
+let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
 	if (lexpr_type == Expr_Int && rexpr_type == Expr_Float) 
 	||(lexpr_type == Expr_Bool && rexpr_type != Expr_Bool) 
 	||(lexpr_type != Expr_Bool && rexpr_type == Expr_Bool) then 
@@ -306,7 +312,7 @@ let check_lhs_rhs_type_match lexpr_type rexpr_type assign_or_param =
 		if assign_or_param == 0 then
 			raise_assign_type_mismatch lexpr_type rexpr_type
 		else
-			raise_param_type_mismatch lexpr_type rexpr_type
+			raise_invok_param_type_mismatch id lexpr_type rexpr_type
 		;
 ;;
 
@@ -328,7 +334,7 @@ let init_prog =
 
 (* The last function to run for checking "main" procedure and checking invoked procedures*)
 let finalize_prog prog =
-
+	debugmsg "Finalizing prog\n";
 	(* Check if "main" proc exist *)
 	check_exist Proc "main";
 
@@ -340,32 +346,39 @@ let finalize_prog prog =
 		raise_main_mustnothave_params "";
 
 	(*2. Check if the invoked procs is valid *)
+	(* get all ivoked procedure *)
+	let invoke_list = (get_symbol_list Invoke) in
+	let  num_of_invoke=  List.length(invoke_list) in
+	debugmsg (sprintf "Num of func %d\n" num_of_invoke);
 
-
-	(* let invoke_list = (Snick_symbol.get_list Proc) in
 	for i = 0 to List.length(invoke_list) - 1  do 
-		let invoke = (List.nth invoke_list i) in
-		let InvokeProc (invoke_id, invoke_exprs) = invoke in
+		debugmsg (sprintf "check proc index %d\n" i);
+ 		let (invoke_sym_id,invoke_sim_object) = (List.nth invoke_list i) in
+ 		match  get_invoke_from_sym_tbl invoke_sim_object with
 
-		(*2.1 Check id invoked proc is exist *)
-		check_exist Proc invoke_id;
+		|InvokeProc (invoke_id, invoke_exprs) ->
+			(*2.1 Check id invoked proc is exist *)
+			check_exist Proc invoke_id;
 
-		(*2.2 check size of params is matched *)
-		let target_proc = Snick_symbol.find Proc invoke_id in
-		let ( _, formal_params, _ ) = target_proc in
-		
-		if List.length(formal_params) != List.length(invoke_exprs) then
-			raise_num_of_param_mismatch List.length(formal_params) List.length(invoke_exprs);
+			(* 2.2 check size of params is matched  *)
+			let target_proc =get_proc_from_sym_tbl (get_symbol Proc invoke_id) in
+			let ( _, formal_params, _ ) = target_proc in
+			let proc_param_length =List.length(formal_params) in 
+			let invoke_param_length =List.length(invoke_exprs) in 
+			
+			if proc_param_length != invoke_param_length then
+				raise_num_of_param_mismatch proc_param_length invoke_param_length;
 
-		(* 2.3 check Type of expr and formal param *)
-		for j = 0 to List.length(formal_params) - 1  do 
-			let formal_param_type = (get_expr_type_for_param (List.nth formal_params j)) in
-			let invoke_expr_type = (get_expr_type_for_expr  (List.nth invoke_exprs j)) in
+			(* 2.3 check Type of expr and formal param *)
+			for j = 0 to List.length(formal_params) - 1  do 
+				let formal_param_type = (get_expr_type_for_param (List.nth formal_params j)) in
+				let invoke_expr_type = (get_expr_type_for_expr  (List.nth invoke_exprs j)) in
 
-			check_lhs_rhs_type_match formal_param_type invoke_expr_type 1;
-		done;
+				check_lhs_rhs_type_match invoke_id formal_param_type invoke_expr_type 1;
+			done; 
+		| _ -> raise_dev_err "invalid match";
 
-	done; *)
+	done;
 
 	debugmsg "Finalized"; 
 	prog;
@@ -413,7 +426,7 @@ let check_assign assign =
 		(* Possible invlid assign
 			-float cannot be assigned to int 
 			-LHS is bool but RHS is not bool and vice versa*)
-		check_lhs_rhs_type_match lexpr_type rexpr_type 0;
+		check_lhs_rhs_type_match lid lexpr_type rexpr_type 0;
 
 		(*TODO, if expr is an int constamt, check out of bound*)
 
