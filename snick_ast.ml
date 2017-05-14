@@ -73,8 +73,8 @@ is an expression. This results in a mutually recursive type
 between lvalue and expr, hence the 'and' keyword between the
 two types. *)
 type lvalue =
-  | LId of identifier
-  | LArrayElement of (identifier * expr list)
+  | LId of (identifier * expr_type)
+  | LArrayElement of (identifier * expr list* expr_type)
     
 (*all expressions. includes basic data types, variable refs, 
 binary/unary expressions and expressions wrapped in parenthesis.*)

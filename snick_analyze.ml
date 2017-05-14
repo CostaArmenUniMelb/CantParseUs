@@ -8,13 +8,21 @@ open Printf
 open Snick_ast
 
 exception Syntax_error of string;;
+exception Dev_error of string;;
 
+let raise_syn_err msg = 
+	raise(Syntax_error  (msg) );
+;;
+
+let raise_dev_err msg = 
+	raise(Dev_error  (msg) );
+;;
 
 
 
 let init_main_tbl  =
 	let symbol_tbl = Hashtbl.create 1024 in
-	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n"),Expr_None)]) )in 
+	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n",Expr_None),Expr_None)]) )in 
 	(* Define type by adding a value as a dummy, then remove it (if don't do this the Ocaml compiler won't compile this) *)
 	Hashtbl.add symbol_tbl "dummy" dummy_data ;
 	Hashtbl.remove symbol_tbl "dummy" ;
@@ -25,13 +33,13 @@ let init_main_tbl  =
 ;;
 
 let add_tbl main_sym_tbl tbl_name =
-	let my_hash = Hashtbl.create 1024 in
+	let symbol_tbl = Hashtbl.create 1024 in
 (* 	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n"),Expr_None)]) )in 
 
 	Hashtbl.add my_hash "dummy" dummy_data ;
 	Hashtbl.remove my_hash "dummy" ; *)
 
-	Hashtbl.add main_sym_tbl tbl_name my_hash;
+	Hashtbl.add main_sym_tbl tbl_name symbol_tbl;
 ;;
 
 let insert_symbol_to_tbl main_sym_tbl tbl_name id symbol_object =
@@ -58,7 +66,7 @@ let get_list main_sym_tbl tbl_name =
 	    ();
 	    in
 	    Hashtbl.iter f target_tbl;
-	  a;
+	 a;
 ;;
 
 
@@ -111,10 +119,30 @@ let get_expr_type_for_typedef typedef =
 		|Array (datatype,id,ranges) -> get_expr_type_for_datatype datatype
 ;;
 
+let get_param_from_sym_tbl param =
+	match param with
+	| Param_symbol parameter_def-> parameter_def;
+	| _ -> raise_dev_err "get_param_from_sym_tbl : type is not param"; 
+;;
+
+let get_proc_from_sym_tbl param =
+	match param with
+	| Proc_symbol proc-> proc;
+	| _ -> raise_dev_err "get_proc_from_sym_tbl : type is not proc"; 
+;;
+
+
 let get_expr_type_for_param param =
 	let (reftype, typedef,expr_type) = param in
 	get_expr_type_for_typedef typedef;
 ;;
+
+let get_expr_type_for_lvalue lvalue =
+	match lvalue with
+	| LId(id,expr_type) -> expr_type
+  	| LArrayElement (id , expr_list,expr_type) ->expr_type
+;;
+
 
 let get_typedef_id typedef =
 	match typedef with
@@ -129,8 +157,8 @@ let get_proc_id proc =
 
 let get_lvalue_id lvalue =
 	match lvalue with
-	| LId(id) -> id
-  	| LArrayElement (id , expr_list) ->id
+	| LId(id,_) -> id
+  	| LArrayElement (id , expr_list,_) ->id
 ;;
 
 let get_rvalue_expr rvalue =
@@ -151,9 +179,7 @@ let get_op_type op =
 
 (* ----Error raising----*)
 
-let raise_syn_err msg = 
-	raise(Syntax_error  (msg) );
-;;
+
 
 
 let raise_type_mismatch expr1 expr2 = 
@@ -164,9 +190,9 @@ let raise_type_mismatch expr1 expr2 =
 ;;
 
 let raise_assign_type_mismatch expr_type1 expr_type2 = 
-	raise_syn_err (sprintf "Assigning Type Mismatch: %s and %s" 
-				(expr_type_tostring expr_type1)
+	raise_syn_err (sprintf "Assigning Type Mismatch: cannot assign %s to %s" 
 				(expr_type_tostring expr_type2)
+				(expr_type_tostring expr_type1)
 			); 
 ;;
 
@@ -246,6 +272,11 @@ let insert_symbol tbl_type id obj =
 
 (* ----Utility----*)
 
+let get_symbol tbl_type id =
+	find_symbol main_tbl (get_tblname tbl_type) id;
+;;
+
+
 let check_exist tbl_type id =
 	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
 
@@ -302,10 +333,10 @@ let finalize_prog prog =
 
 	(* 1. if main exist, check param*)
 
-(* 	let main = (Snick_symbol.find Proc "main") in
-	let (id,params,proc_body) = main in
+	let main = (get_symbol Proc "main") in
+	let (id,params,proc_body) = get_proc_from_sym_tbl main in
 	if List.length (params) >0 then
-		raise_main_mustnothave_params ""; *)
+		raise_main_mustnothave_params "";
 
 	(*2. Check if the invoked procs is valid *)
 
@@ -369,12 +400,12 @@ let check_proc proc =
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
 
-
-(* 	match assign with
+ 	match assign with
 	| Assign (lvalue, rvalue) -> 
 		let lid = (get_lvalue_id lvalue) in
-		let lexpr_type =  get_expr_type_for_param (Snick_symbol.find Current lid) in
-		let rexpr_type = (get_expr_type_for_expr (get_rvalue_expr rvalue)) in
+		let param = get_param_from_sym_tbl (get_symbol Current lid) in
+		let lexpr_type =  get_expr_type_for_param  param in
+		let rexpr_type = get_expr_type_for_expr (get_rvalue_expr rvalue) in
 		(*check if param is exist*)
 		check_exist Current lid;
 		(* Check type match*)
@@ -386,10 +417,8 @@ let check_assign assign =
 		(*TODO, if expr is an int constamt, check out of bound*)
 
 		assign;
-	| _ -> debugmsg "Invalid Assign\n"; assign; *)
+	| _ -> debugmsg "Invalid Assign\n"; assign; 
 
-
-	assign;
 ;;
 
 let check_invoke invoke =
@@ -406,19 +435,24 @@ let check_invoke invoke =
 ;;
 
 let check_lvalue lvalue =
-	debugmsg ("Checking lvalue " ^  (get_lvalue_id lvalue));
-	check_exist Current (get_lvalue_id lvalue);
+	let lvalue_id =  (get_lvalue_id lvalue) in 
+	debugmsg ("Checking lvalue " ^ lvalue_id ^"\n");
+	check_exist Current lvalue_id;
 
+	(*assign expr_type*)
+	let param = get_param_from_sym_tbl (get_symbol Current lvalue_id) in
+	let paramtype = get_expr_type_for_param param in
+	debugmsg ("Param type " ^ (expr_type_tostring paramtype));
 	(* check if the input is array with exprs, the expr_type of all exprs must be int only*)
 	match lvalue with
-  	| LArrayElement (id , expr_list) ->
+  	| LArrayElement (id , expr_list, _) ->
   		for i = 0 to List.length(expr_list) -1  do 
 			let expr = (List.nth expr_list i) in
 			if (get_expr_type_for_expr expr) != Expr_Int then
 				raise_expect_int expr; 
 		done;
-		lvalue;
-	| _ -> debugmsg "Not an array\n"; lvalue;
+		LArrayElement (id , expr_list, paramtype) ;
+	| LId (id,_) ->  LId (id,paramtype);
 ;;
 
 (* Check if the expr has the type bool, used in IF and While *)
@@ -496,7 +530,7 @@ let check_param param =
 	check_not_exist Current id;
 	(* save to symbol table*)
 	insert_symbol Current id (Param_symbol(reftype, typedef, get_expr_type_for_typedef typedef) );
-
+	debugmsg (sprintf "Param Type %s\n" ( expr_type_tostring ( get_expr_type_for_typedef typedef) ) ); 
 	debugmsg "Checking param success\n"; 
 	(reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
@@ -520,6 +554,7 @@ let assign_expr eunop =
 	match eunop with
 	 | Eunop (op,expr,expr_type) -> Eunop (op,expr,get_expr_type_for_expr expr);
 	 | Eparens (expr,expr_type) -> Eparens (expr,get_expr_type_for_expr expr);
+	 | Elval (lvalue,expr_type) -> Elval (lvalue,get_expr_type_for_lvalue lvalue);
 	 | _ -> eunop ;
 ;;
 

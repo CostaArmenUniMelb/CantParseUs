@@ -148,8 +148,8 @@ rvalue :
   | expr { Rexpr $1 }
 
 lvalue:
-  | IDENT { Snick_analyze.check_lvalue ( LId $1 ) }
-  | IDENT LBRACK exprs RBRACK  { Snick_analyze.check_lvalue ( LArrayElement ( $1, List.rev $3) ) }
+  | IDENT { Snick_analyze.check_lvalue ( LId ($1,Expr_None) ) }
+  | IDENT LBRACK exprs RBRACK  { Snick_analyze.check_lvalue ( LArrayElement ( $1, List.rev $3,Expr_None) ) }
 
 /*Expressions*/
 /*Multiple expressions connected by ","*/
@@ -168,7 +168,7 @@ expr:
   | INT_CONST { Eint ($1, Expr_Int) }
   | FLOAT_CONST { Efloat ($1, Expr_Float) }
   | STRING_CONST { Estring ($1, Expr_String) }
-  | lvalue { Elval ($1, Expr_None) } 
+  | lvalue { Snick_analyze.assign_expr (Elval ($1, Expr_None)) } 
 
   | expr PLUS expr {Snick_analyze.check_expr_op (Ebinop ($1, Op_add, $3, Expr_None)) }
   | expr MINUS expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_sub, $3, Expr_None))  }

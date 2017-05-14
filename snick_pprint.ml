@@ -150,8 +150,8 @@ mutually recursive functions to format them. The 'and' keyword between the two
 formatting functions allows for this mutual recursion.*)
 let rec format_lvalue lval =
   match lval with
-    | LId(i) -> i
-    | LArrayElement(id,ind) -> 
+    | LId(i,_) -> i
+    | LArrayElement(id,ind,_) -> 
       let expression_list = format_expression_list ind in
       id ^ "[" ^ expression_list ^ "]"
 
