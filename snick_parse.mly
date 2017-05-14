@@ -58,7 +58,10 @@ let main_tbl = Snick_analyze.init_main_tbl;;
 %token EOF
 
 /*Priority*/
-%nonassoc EQ LT MT LTEQ MTEQ
+%left OR
+%left AND
+%nonassoc NOT
+%nonassoc EQ LT GT LTEQ GTEQ NOTEQ
 %left PLUS MINUS  /*Lower precendence*/
 %left MUL DIV     /*Higher precendence*/
 %nonassoc UMINUS  /*Highest precendence*/

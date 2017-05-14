@@ -71,7 +71,7 @@ end
 proc if_else()
 
 	int a;
-	int j;
+	float j;
 
 	j:=20;
 
@@ -195,7 +195,7 @@ proc assert_bool(val bool expecting_val,val bool value)
 end
 
 proc write_bool(val bool value)
-	if expecting_val = true then
+	if value = true then
 		write "TRUE";
 	else
 		write "FALSE";

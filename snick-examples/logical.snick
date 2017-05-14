@@ -1,11 +1,12 @@
 proc logical(val int myval)
-	int a;
+	float a;
 	int b;
-	float c;
 
-	bool d;
-	bool f;
-	a:=- 99;
+
+	if a = 0.5 and b = 20.5 then
+		a:=- 99;
+	fi
+	c:= 55;
 
 	a:=- (99 - 888);
 

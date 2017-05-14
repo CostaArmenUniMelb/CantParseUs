@@ -72,7 +72,6 @@ let get_list main_sym_tbl tbl_name =
 
 (* ----END Symbol table---- *)
 
-
 (* ----Debugging---- *)
 
 let debugging = true;;
@@ -82,6 +81,22 @@ let debugmsg msg =
 	if debugging then 
 		print_string msg;
 ;;
+
+let op_to_string op = 
+	match op with
+	| Op_add  -> "Op_add"
+	| Op_sub  -> "Op_sub"
+	| Op_mul  -> "Op_mul"
+	| Op_div -> "Op_div"
+	| Op_eq  -> "Op_eq"
+	| Op_lt -> "Op_lt"
+	| Op_or   -> "Op_or"
+	| Op_and -> "Op_and"
+ 	| Op_not_eq -> "Op_not_eq"
+	| Op_lt_eq -> "Op_lt_eq"
+	| Op_gt -> "Op_gt"
+	| Op_gt_eq -> "Op_gt_eq"
+;;	
 
 (* ----END Debugging---- *)
 
@@ -342,6 +357,9 @@ let check_not_exist tbl_type id =
 	0 for assign
 	1 for param checking*)
 let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
+	(* Possible invlid assign
+	-float cannot be assigned to int 
+	-LHS is bool but RHS is not bool and vice versa*)
 	if (lexpr_type == Expr_Int && rexpr_type == Expr_Float) 
 	||(lexpr_type == Expr_Bool && rexpr_type != Expr_Bool) 
 	||(lexpr_type != Expr_Bool && rexpr_type == Expr_Bool) then 
@@ -355,18 +373,16 @@ let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
 
 (* ----END Utility----*)
 
-
 (* ----Functions for parser----*)
 
 (* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
-	 debugmsg "Initiated";
+	 debugmsg "Initiating";
 	 (* Add symbol tbls for Proc and invoke *)
-
 	 add_tbl main_tbl (get_tblname Proc);
 	 add_tbl main_tbl (get_tblname Invoke);
 
-	 debugmsg "Initiated success";
+	 debugmsg "Initiated success\n";
 ;; 
 
 (* The last function to run for checking "main" procedure and checking invoked procedures*)
@@ -417,7 +433,7 @@ let finalize_prog prog =
 
 	done;
 
-	debugmsg "Finalized"; 
+	debugmsg "Check completed 555\n"; 
 	prog;
 ;;
 
@@ -439,19 +455,17 @@ let add_proc proc_id=
 (* Run check proc before if parse other part *)
 let check_proc proc =
 	let proc_id = (get_proc_id proc) in
-	debugmsg "Checking Proc";
-
+	debugmsg (sprintf "Checking Proc %s\n" proc_id);
 
 	(* insert this proc info to the Proc table*)
 	insert_symbol Proc proc_id (Proc_symbol proc);
 
-	debugmsg "Checking Proc success";
+	debugmsg "Checking Proc success\n";
 	proc;
 ;;	
 
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
-
  	match assign with
 	| Assign (lvalue, rvalue) -> 
 		let lid = (get_lvalue_id lvalue) in
@@ -461,12 +475,10 @@ let check_assign assign =
 		(*check if param is exist*)
 		check_exist Current lid;
 		(* Check type match*)
-		(* Possible invlid assign
-			-float cannot be assigned to int 
-			-LHS is bool but RHS is not bool and vice versa*)
+
 		check_lhs_rhs_type_match lid lexpr_type rexpr_type 0;
 
-	| _ -> debugmsg "Invalid Assign\n"; 
+	| _ -> raise_dev_err "invalid match";
 	;
 	assign; 
 
@@ -550,6 +562,8 @@ let check_expr_op expr  =
 		let optype = ref ( get_op_type op) in
 		let expr_type1 = (get_expr_type_for_expr expr1) in
 		let expr_type2 = (get_expr_type_for_expr expr2) in
+		debugmsg (sprintf "Reading op %s\n" (op_to_string op)) ;
+		
 		(* if optype is both to bool (the = or != op), we have to decide
 		 whether it is Op_type_bool_to_bool or Op_type_math_to_bool *)
 		if !optype  = Op_type_both_to_bool then
@@ -618,7 +632,7 @@ let check_typedef_range ttypedef =
 					raise_invalid_arraysize min max; 
 			done;
 			
-		| _ -> debugmsg "Not an array\n"; 
+		| _ -> ();
 		;
 ;;
 
@@ -627,7 +641,7 @@ the params can be REF or VAL while the dec is only VAL *)
 let check_param param =
 	let (reftype, typedef,expr_type) = param in
 	let id = (get_typedef_id typedef) in
-	debugmsg "Checking param\n"; 
+	debugmsg (sprintf "Checking Param %s\n" id ); 
 	check_not_exist Current id;
 	(* save to symbol table*)
 	insert_symbol Current id (Param_symbol(reftype, typedef, get_expr_type_for_typedef typedef) );
@@ -640,7 +654,7 @@ let check_dec dec =
 	let (typedef,expr_type) = dec in
 	let id = (get_typedef_id typedef) in
 	let final_expr_type = get_expr_type_for_typedef typedef in
-	debugmsg (sprintf "Checking dec:%s\n" id); 
+	debugmsg (sprintf "Checking Dec %s\n" id );  
 	check_not_exist Current id;
 	(* Check array size *)
 	check_typedef_range typedef;
