@@ -173,6 +173,26 @@ let get_rvalue_expr rvalue =
 	expr;
 ;;
 
+let get_ranges_from_param param =
+	let (passby , type_def , expr_type)= param in
+	match type_def with
+	|Array (datatype,id,ranges) -> List.rev ranges;
+	| _ -> [];
+;;
+
+let is_lvalue_array lvalue =
+	match lvalue with
+	| LId(id,_) -> false
+  	| LArrayElement (id , expr_list,_) ->true
+;;
+let is_param_array param =
+	let (reftype, typedef,expr_type) = param in
+	match typedef with
+	| Single  (datatype , identifier) ->false
+  	| Array  (datatype, identifier , range_list)->true
+;;
+
+
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
@@ -213,13 +233,27 @@ let raise_invalid_arraysize min max =
 	raise_syn_err (sprintf "Invalid Array Size: %d and %d" min max);
 ;;
 
-let raise_out_of_bound min max index=
-	raise_syn_err (sprintf "Index out of bound, possible values is %d and %d 
-						but the index is %d" min max index);
+let raise_need_index id =
+	raise_syn_err (sprintf "'%s' needs an index" id);
 ;;
 
-let raise_num_of_param_mismatch expected actual =
-	raise_syn_err (sprintf "Number of params does not match. The expected is %d but the actual is %d" expected actual);
+let raise_no_need_index id =
+	raise_syn_err (sprintf "'%s' does not need an index" id);
+;;
+
+let raise_out_of_bound min max index=
+	raise_syn_err (sprintf "Index out of bound, possible values are %d and %d but the index is %d"
+			 min max index);
+;;
+
+let raise_num_of_param_mismatch id expected actual =
+	raise_syn_err (sprintf "Number of params for procedure '%s' does not match. The expected is %d but the actual is %d"
+			id expected actual);
+;;
+
+let raise_num_of_indices_mismatch expected actual =
+	raise_syn_err (sprintf "Number of indices does not match. The expected is %d but the actual is %d" 
+			expected actual);
 ;;
 
 let raise_not_exist id =
@@ -235,13 +269,13 @@ let raise_zero_division dummy =
 ;;
 
 let raise_expect_bool expr =
-	raise_syn_err (sprintf "The expected expression type must be Bool
-						but the current expression is %s" (expr_type_tostring (get_expr_type_for_expr expr)) );
+	raise_syn_err (sprintf "The expected expression type must be Bool but the current expression is %s" 
+		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_int expr =
-	raise_syn_err (sprintf "The expected expression type must be Int 
-						but the current expression is %s" (expr_type_tostring (get_expr_type_for_expr expr)) );
+	raise_syn_err (sprintf "The expected expression type must be Int but the current expression is %s" 
+		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_main_mustnothave_params dummy =
@@ -283,7 +317,7 @@ let get_symbol tbl_type id =
 ;;
 
 let get_symbol_list tbl_type =
-	get_list main_tbl (get_tblname tbl_type);
+	(get_list main_tbl (get_tblname tbl_type));
 ;;
 
 
@@ -367,7 +401,7 @@ let finalize_prog prog =
 			let invoke_param_length =List.length(invoke_exprs) in 
 			
 			if proc_param_length != invoke_param_length then
-				raise_num_of_param_mismatch proc_param_length invoke_param_length;
+				raise_num_of_param_mismatch invoke_id proc_param_length invoke_param_length;
 
 			(* 2.3 check Type of expr and formal param *)
 			for j = 0 to List.length(formal_params) - 1  do 
@@ -428,10 +462,42 @@ let check_assign assign =
 			-LHS is bool but RHS is not bool and vice versa*)
 		check_lhs_rhs_type_match lid lexpr_type rexpr_type 0;
 
-		(*TODO, if expr is an int constamt, check out of bound*)
+		(* check if the decleared type is an array, the lvalue must also be id with index *)
+		if (is_param_array param) && not (is_lvalue_array lvalue) then
+			raise_need_index lid;
+		if  not (is_param_array param) &&  (is_lvalue_array lvalue) then
+			raise_no_need_index lid;
 
-		assign;
-	| _ -> debugmsg "Invalid Assign\n"; assign; 
+
+
+		match lvalue with
+		| LArrayElement (id ,expr_list, _ ) ->
+			(* Get current param arraysize *)
+			let formal_param = get_param_from_sym_tbl (get_symbol Current id) in 
+			let ranges =  get_ranges_from_param  formal_param in
+			let num_of_lval_indices = List.length(expr_list) in
+			let num_of_param_indices = List.length(ranges) in
+
+			(* Check number of indices *)
+			if num_of_lval_indices !=num_of_param_indices then
+				raise_num_of_indices_mismatch num_of_param_indices num_of_lval_indices ;
+			(*If expr is an int constamt, check out of bound*)
+			for i = 0 to List.length(expr_list) - 1  do 
+				let expr = (List.nth expr_list i) in
+				match expr with
+				| Eint (index,_) ->
+					let (min,max) = (List.nth ranges i) in
+					if index < min || index > max then
+						raise_out_of_bound min max index;
+				| _ ->  ();
+
+			done;
+		| _ ->();
+		;
+
+	| _ -> debugmsg "Invalid Assign\n"; 
+	;
+	assign; 
 
 ;;
 
