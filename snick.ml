@@ -29,7 +29,7 @@ let main () =
   let lexbuf = Lexing.from_channel infile in
   (* Call the parser *)
   try
-    let prog = Snick_parse.program Snick_lex.token lexbuf in
+    let (prog,main_sym_tbl) = Snick_parse.program_with_sym_tbl Snick_lex.token lexbuf in
     match !mode with
     | PrettyPrint ->print_string (Snick_pprint.print_program prog)
     | Compile -> print_string ("Sorry, cannot generate code yet\n")

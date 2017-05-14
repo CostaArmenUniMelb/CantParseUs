@@ -63,14 +63,18 @@ let main_tbl = Snick_analyze.init_main_tbl;;
 %left MUL DIV     /*Higher precendence*/
 %nonassoc UMINUS  /*Highest precendence*/
 
-%type <Snick_ast.program> program
+%type <Snick_ast.program_with_sym_tbl> program_with_sym_tbl
 
-%start program
+%start program_with_sym_tbl
 %%
 /* Rules */
 /*Start from top to bottom*/
 
-/*Program is the top most rule, program must contains exactly on "main" procedure*/
+/*Program is the top most rule*/
+
+program_with_sym_tbl:
+  | program {($1, Snick_analyze.get_main_sym_tbl)}
+
 program:
   | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ( $1 ) } 
 

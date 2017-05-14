@@ -2,8 +2,7 @@ proc main()
 float x;
 float result;
 int n;
-bool rr;
-power(x*x,rr,n);
+
     write "Float x: ";
     read x;
     write "Positive integer n: ";

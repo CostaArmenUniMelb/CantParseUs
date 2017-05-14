@@ -18,8 +18,8 @@ let raise_dev_err msg =
 	raise(Dev_error  (msg) );
 ;;
 
-
 (* ----Symbol table---- *)
+
 let hash_size = 1024;;
 
 let init_main_tbl  =
@@ -54,6 +54,7 @@ let find_symbol main_sym_tbl tbl_name id  =
 	Hashtbl.find target_tbl id;
 ;;
 
+(* Return all symbols in the table *)
 let get_list main_sym_tbl tbl_name = 
 	let target_tbl = Hashtbl.find main_sym_tbl tbl_name in
 	let a = ref [] in
@@ -138,7 +139,6 @@ let get_invoke_from_sym_tbl invoke =
 	| _ -> raise_dev_err "get_invoke_from_sym_tbl : type is not invoke"; 
 ;;
 
-
 let get_expr_type_for_param param =
 	let (reftype, typedef,expr_type) = param in
 	get_expr_type_for_typedef typedef;
@@ -149,7 +149,6 @@ let get_expr_type_for_lvalue lvalue =
 	| LId(id,expr_type) -> expr_type
   	| LArrayElement (id , expr_list,expr_type) ->expr_type
 ;;
-
 
 let get_typedef_id typedef =
 	match typedef with
@@ -192,7 +191,6 @@ let is_param_array param =
   	| Array  (datatype, identifier , range_list)->true
 ;;
 
-
 (* Get the type of operation for checking expr type, see the comment in snick_ast for more details*)
 let get_op_type op =
 	match op with
@@ -202,17 +200,9 @@ let get_op_type op =
 		|Op_eq |Op_not_eq -> Op_type_both_to_bool
 ;;
 
-
 (* ----END Type management---- *)
 
 (* ----Error raising----*)
-
-let raise_expr_type_mismatch expr1 expr2 = 
-	raise_syn_err (sprintf "Expression Type Mismatch: %s and %s" 
-				(expr_type_tostring (get_expr_type_for_expr expr1))
-				(expr_type_tostring (get_expr_type_for_expr expr2))
-			); 
-;;
 
 let raise_assign_type_mismatch expr_type1 expr_type2 = 
 	raise_syn_err (sprintf "Assigning Type Mismatch: cannot assign %s to %s" 
@@ -269,12 +259,17 @@ let raise_zero_division dummy =
 ;;
 
 let raise_expect_bool expr =
-	raise_syn_err (sprintf "The expected expression type must be Bool but the current expression is %s" 
+	raise_syn_err (sprintf "The expected expression type must be Boolean but the current expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_int expr =
 	raise_syn_err (sprintf "The expected expression type must be Int but the current expression is %s" 
+		(expr_type_tostring (get_expr_type_for_expr expr)) );
+;;
+
+let raise_expect_math expr =
+	raise_syn_err (sprintf "The expected expression type must be Int or float but the current expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
@@ -308,10 +303,6 @@ let insert_symbol tbl_type id obj =
 	(* (); *)
 ;;
 
-(* ----END Symbol table management----*)
-
-(* ----Utility----*)
-
 let get_symbol tbl_type id =
 	find_symbol main_tbl (get_tblname tbl_type) id;
 ;;
@@ -320,6 +311,13 @@ let get_symbol_list tbl_type =
 	(get_list main_tbl (get_tblname tbl_type));
 ;;
 
+let get_main_sym_tbl  =
+	main_tbl;
+;;
+
+(* ----END Symbol table management----*)
+
+(* ----Utility----*)
 
 let check_exist tbl_type id =
 	let sym = exist_symbol main_tbl (get_tblname tbl_type) id in
@@ -432,6 +430,7 @@ let add_proc proc_id=
 
 	debugmsg "Adding Proc success\n";
 ;;
+
 (* Run check proc before if parse other part *)
 let check_proc proc =
 	let proc_id = (get_proc_id proc) in
@@ -498,7 +497,6 @@ let check_lvalue lvalue =
 	if  not (is_param_array param) &&  (is_lvalue_array lvalue) then
 		raise_no_need_index lid;
 
-	
 	match lvalue with
   	| LArrayElement (id , expr_list, _) ->
 		(* Get current param arraysize *)
@@ -517,7 +515,7 @@ let check_lvalue lvalue =
 			(* check if the expr_type of all exprs must be int only*)
 			if (get_expr_type_for_expr expr) != Expr_Int then
 				raise_expect_int expr; 
-				
+
 			(*If expr is an int constamt, check out of bound*)
 			match expr with
 			| Eint (index,_) ->
@@ -541,6 +539,7 @@ let check_expr_bool expr  =
 
 (* check and assign expr type for Ebinop operations *)
 let check_expr_op expr  =
+	debugmsg "Checking exp op\n";
 	match expr with
 	| Ebinop (expr1,op,expr2,expr_type) -> 
 		let optype = ref ( get_op_type op) in
@@ -556,13 +555,16 @@ let check_expr_op expr  =
 					optype := Op_type_bool_to_bool
 		;
 
+		debugmsg (sprintf "Checking exp, expr_type1=%s expr_type2=%s\n" (expr_type_tostring expr_type1)  (expr_type_tostring expr_type2));
+
 		match !optype with
 		| Op_type_math_to_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
-			if (expr_type1 != Expr_Int && expr_type1 != Expr_Float) 
-			|| (expr_type2 != Expr_Int && expr_type2 != Expr_Float) then
-				raise_expr_type_mismatch expr1 expr2;
-
+			if (expr_type1 != Expr_Int && expr_type1 != Expr_Float) then
+				raise_expect_math expr1;
+			if (expr_type2 != Expr_Int && expr_type2 != Expr_Float) then
+				raise_expect_math expr2;
+				
 			(* Check divide by zero *)
 			if op == Op_div then
 				match expr2 with
@@ -588,8 +590,10 @@ let check_expr_op expr  =
 			;
 
 		| Op_type_bool_to_bool -> 
-			if expr_type1 != Expr_Bool || expr_type2!= Expr_Bool then
-				raise_expr_type_mismatch expr1 expr2;
+			if expr_type1 != Expr_Bool then
+				raise_expect_bool expr1;
+			if expr_type2 != Expr_Bool then
+				raise_expect_bool expr2;
 			Ebinop (expr1,op,expr2,Expr_Bool);
 		| _ -> raise_dev_err "Invalid op type match";
 		;
@@ -652,8 +656,3 @@ let assign_expr eunop =
 ;;
 
 (* ----END Functions for parser----*)
-
-
-
-
-

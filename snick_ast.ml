@@ -131,20 +131,28 @@ type procedure = (identifier * parameter_def list * procedure_body)
 (*an entire program is a sequence of procedures*)
 type program = procedure list
 
-
-(*tbl_type define the symbol table that will be used for insert and add
-Proc is used for storing all procedures and their details
-Invoke is  for storing all invoked procedures and parameters ** Invoke is used for syntac checking only,
-           the Codegen will never uses Invoke table
-Current is for storeing all parameters in a procedure (type = Param). It will use the current procedure name 
-          as the real name and changes everytime the parser reads a new procedure *)
 type tbl_type =
   | Proc
   | Invoke
   | Current
 
 (* 3 possible types. Procedure, paramters and invoke *)
+(*tbl_type define the symbol table that will be used for insert and add
+Proc is used for storing all procedures and their details 
+Invoke is  for storing all invoked procedures and parameters ** Invoke is used for syntac checking only,
+           the Codegen will never uses Invoke table
+Current is for storeing all parameters in a procedure (type = Param). It will use the current procedure name 
+          as the real name and changes everytime the parser reads a new procedure *)
 type symbol_data =
   | Invoke_symbol of statement  (* for store InvokeProc only*)
   | Proc_symbol of procedure
   | Param_symbol of parameter_def
+
+(* a single symbol tbl *)
+type symbol_table = (string, symbol_data) Hashtbl.t
+
+(*return the AST and the symbol tbl*)
+type program_with_sym_tbl = (program *  (string, symbol_table) Hashtbl.t)
+
+
+

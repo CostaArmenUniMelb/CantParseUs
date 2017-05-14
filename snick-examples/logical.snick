@@ -2,6 +2,9 @@ proc logical(val int myval)
 	int a;
 	int b;
 	float c;
+
+	bool d;
+	bool f;
 	a:=- 99;
 
 	a:=- (99 - 888);
@@ -46,30 +49,16 @@ proc logical(val int myval)
 		a:=(2 - 3) - 4;
 		c:=(2 - 3.7) - 4;
 		#a:= true or false;
-		a:=2 < (3 - 4);
+		a:=2 + (3 - 4);
 
         #Need to omit all prenthesis
-        a:=(a and b) and c;
-        a:=a and (b and c);
-        a:=(a and b and c);
+        d:=(f and d) and f;
 
-        a:=(a or b) or c;
-        a:=a or (b or c);
-        a:=(a or b or c);
-
-        a:=(a and b) or c;
-        a:=a or (b and c);
-
-        #Need to keep all prenthesis
-        a:=a and (b or c);
-        a:=(a or b) and c;
-        a:=(a and b) or c;
-        a:=a or (b and c);
 
     fi
 end
 
-proc logical2()
+proc logical2(val int a)
 	a:=2*(3*4);
 end
 
@@ -77,11 +66,11 @@ proc main()
 float x;
 float result;
 int n;
-	a:=2*(3*4);
+	n:=2*(3*4);
 end
 
 proc function2()
-	a:=2*(3*4);
+	n:=2*(3*4);
 end
 
 proc function3()
