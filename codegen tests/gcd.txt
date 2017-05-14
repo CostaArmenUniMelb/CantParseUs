@@ -1,0 +1,107 @@
+   call main
+   halt
+main:
+# prologue
+   push_stack_frame 5
+# parameters
+# declerations
+   int_const r0, 0
+   store 0, r0
+   int_const r0, 0
+   store 1, r0
+   int_const r0, 0
+   store 2, r0
+   int_const r0, 0
+   store 3, r0
+   int_const r0, 0
+   store 4, r0
+# statements
+# write
+   string_const r0, "Input two positive integers: "
+   call_builtin print_string
+# read
+   call_builtin read_int
+   store 0, r0
+# read
+   call_builtin read_int
+   store 1, r0
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# ifThen
+   load r0, 0
+   load r1, 1
+   cmp_lt_int r0, r0, r1
+   branch_on_false r0, then1
+# assign
+   load r0, 0
+   store 2, r0
+# assign
+   load r0, 1
+   store 0, r0
+# assign
+   load r0, 2
+   store 1, r0
+then1:
+# write
+   string_const r0, "The gcd of "
+   call_builtin print_string
+# write
+   load r0, 0
+   call_builtin print_int
+# write
+   string_const r0, " and "
+   call_builtin print_string
+# write
+   load r0, 1
+   call_builtin print_int
+# write
+   string_const r0, " is "
+   call_builtin print_string
+# assign
+   load r0, 0
+   load r1, 1
+   div_int r0, r0, r1
+   store 3, r0
+# assign
+   load r0, 0
+   load r1, 3
+   load r2, 1
+   mul_int r1, r1, r2
+   sub_int r0, r0, r1
+   store 4, r0
+# whileDo
+begin3:
+   load r0, 4
+   int_const r1, 0
+   cmp_gt_int r0, r0, r1
+   branch_on_false r0, after2
+# assign
+   load r0, 1
+   store 0, r0
+# assign
+   load r0, 4
+   store 1, r0
+# assign
+   load r0, 0
+   load r1, 1
+   div_int r0, r0, r1
+   store 3, r0
+# assign
+   load r0, 0
+   load r1, 3
+   load r2, 1
+   mul_int r1, r1, r2
+   sub_int r0, r0, r1
+   store 4, r0
+   branch_uncond begin3
+after2:
+# write
+   load r0, 1
+   call_builtin print_int
+# write
+   string_const r0, "\n"
+   call_builtin print_string
+# epilogue
+   pop_stack_frame 5
+   return
