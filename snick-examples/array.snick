@@ -15,6 +15,6 @@ proc fib( val int n, ref float out)
 
     fib(n - 2, n);
     fib(7,3);
-    fib(n[2],88);
+    fib(n,88);
  
 end

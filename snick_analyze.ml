@@ -443,7 +443,7 @@ let check_proc proc =
 
 	debugmsg "Checking Proc success";
 	proc;
-;;
+;;	
 
 let check_assign assign =
 	(* similar to  check_expr_op but a little simpler*)
@@ -461,39 +461,6 @@ let check_assign assign =
 			-float cannot be assigned to int 
 			-LHS is bool but RHS is not bool and vice versa*)
 		check_lhs_rhs_type_match lid lexpr_type rexpr_type 0;
-
-		(* check if the decleared type is an array, the lvalue must also be id with index *)
-		if (is_param_array param) && not (is_lvalue_array lvalue) then
-			raise_need_index lid;
-		if  not (is_param_array param) &&  (is_lvalue_array lvalue) then
-			raise_no_need_index lid;
-
-
-
-		match lvalue with
-		| LArrayElement (id ,expr_list, _ ) ->
-			(* Get current param arraysize *)
-			let formal_param = get_param_from_sym_tbl (get_symbol Current id) in 
-			let ranges =  get_ranges_from_param  formal_param in
-			let num_of_lval_indices = List.length(expr_list) in
-			let num_of_param_indices = List.length(ranges) in
-
-			(* Check number of indices *)
-			if num_of_lval_indices !=num_of_param_indices then
-				raise_num_of_indices_mismatch num_of_param_indices num_of_lval_indices ;
-			(*If expr is an int constamt, check out of bound*)
-			for i = 0 to List.length(expr_list) - 1  do 
-				let expr = (List.nth expr_list i) in
-				match expr with
-				| Eint (index,_) ->
-					let (min,max) = (List.nth ranges i) in
-					if index < min || index > max then
-						raise_out_of_bound min max index;
-				| _ ->  ();
-
-			done;
-		| _ ->();
-		;
 
 	| _ -> debugmsg "Invalid Assign\n"; 
 	;
@@ -515,22 +482,52 @@ let check_invoke invoke =
 ;;
 
 let check_lvalue lvalue =
-	let lvalue_id =  (get_lvalue_id lvalue) in 
-	debugmsg ("Checking lvalue " ^ lvalue_id ^"\n");
-	check_exist Current lvalue_id;
+	let lid =  (get_lvalue_id lvalue) in 
+	debugmsg ("Checking lvalue " ^ lid ^"\n");
+	check_exist Current lid;
 
 	(*assign expr_type*)
-	let param = get_param_from_sym_tbl (get_symbol Current lvalue_id) in
+	let param = get_param_from_sym_tbl (get_symbol Current lid) in
 	let paramtype = get_expr_type_for_param param in
 	debugmsg ("Lvalue type " ^ (expr_type_tostring paramtype) ^"\n");
-	(* check if the input is array with exprs, the expr_type of all exprs must be int only*)
+
+	(* Both must have a mathced type, array or single *)
+	(* if the decleared type is an array, the lvalue must also be id with index *)
+	if (is_param_array param) && not (is_lvalue_array lvalue) then
+			raise_need_index lid;
+	if  not (is_param_array param) &&  (is_lvalue_array lvalue) then
+		raise_no_need_index lid;
+
+	
 	match lvalue with
   	| LArrayElement (id , expr_list, _) ->
-  		for i = 0 to List.length(expr_list) -1  do 
+		(* Get current param arraysize *)
+		let formal_param = get_param_from_sym_tbl (get_symbol Current id) in 
+		let ranges =  get_ranges_from_param  formal_param in
+		let num_of_lval_indices = List.length(expr_list) in
+		let num_of_param_indices = List.length(ranges) in
+
+		(* Check number of indices *)
+		if num_of_lval_indices !=num_of_param_indices then
+			raise_num_of_indices_mismatch num_of_param_indices num_of_lval_indices ;
+
+		
+		for i = 0 to List.length(expr_list) - 1  do 
 			let expr = (List.nth expr_list i) in
+			(* check if the expr_type of all exprs must be int only*)
 			if (get_expr_type_for_expr expr) != Expr_Int then
 				raise_expect_int expr; 
+				
+			(*If expr is an int constamt, check out of bound*)
+			match expr with
+			| Eint (index,_) ->
+				let (min,max) = (List.nth ranges i) in
+				if index < min || index > max then
+					raise_out_of_bound min max index;
+			| _ ->  ();
+
 		done;
+
 		LArrayElement (id , expr_list, paramtype) ;
 	| LId (id,_) ->  LId (id,paramtype);
 ;;
