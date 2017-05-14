@@ -22,7 +22,7 @@ let raise_dev_err msg =
 
 (* ----Debugging---- *)
 
-let debugging = true;; (*Allow showing debug msgs*)
+let debugging = false;; (*Allow showing debug msgs*)
 
 (* Show  some messages for debugging *)
 let debugmsg msg = 
