@@ -1,0 +1,53 @@
+proc main()
+	int a[0..8];
+	int value;
+	int temp;
+	int temp2;
+	a[0] := - 001;
+	a[1] := 001;
+	a[2] := 3;
+	a[3] := 8;
+	a[4] := 120;
+	a[5] := 027;
+	a[6] := 12;
+	a[7] := 9;
+	a[8] := 28;
+	temp := 0;
+	temp2 := 0;
+
+	while temp <= 8 do 
+	    while temp2 do
+	    	if a[temp] > a[temp2] then
+	    		value := a[temp];
+	    		a[temp] := a[temp2];
+	    		a[temp2] := value;
+
+	    	fi
+	    	temp2 := temp2 + 1;
+	    od
+	    temp := temp + 1;
+	od
+	temp := 0;
+	while temp <=8 do
+		write a[temp];
+	od
+end
+
+proc parenTest()
+	int a;
+	float b;
+	bool flag;
+	a := 1;
+	b := 0.02300;
+	flag := false;
+
+	a := ((((((3+3)*2)))));
+	a := (1*7)+2;
+	a := -2;
+	a := (1+7)*2;
+	a := -(1+7)*2;
+	b := 0.201 * 0.800;
+	b := (0.201 + 0.800)*0.7;
+	b := (0.201*0.800)+0.7;
+	flag := not(true and false) or (true and true);
+end
