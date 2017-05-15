@@ -22,7 +22,7 @@ let raise_dev_err msg =
 
 (* ----Debugging---- *)
 
-let debugging = false;; (*Allow showing debug msgs*)
+let debugging = true;; (*Allow showing debug msgs*)
 
 (* Show  some messages for debugging *)
 let debugmsg msg = 
@@ -250,6 +250,14 @@ let raise_assign_type_mismatch expr_type1 expr_type2 =
 					); 
 ;;
 
+let raise_compare_type_mismatch expr_type1 expr_type2 = 
+	raise_syn_err (sprintf "Cannot compare %s and %s" 
+						(expr_type_tostring expr_type2)
+						(expr_type_tostring expr_type1)
+					); 
+;;
+
+
 let raise_invok_param_type_mismatch invokeid expr_type1 expr_type2 = 
 	raise_syn_err (sprintf "The formal and actual parameter type mismatch for procedure '%s'.Expected %s but the actual is %s" 
 						invokeid
@@ -390,13 +398,6 @@ let check_lhs_rhs_type_match id lexpr_type rexpr_type assign_or_param =
 		else
 			raise_invok_param_type_mismatch id lexpr_type rexpr_type
 		;
-;;
-
-(* Check if the expr has the type bool, used in IF and While *)
-let check_expr_bool expr  =
-	if get_expr_type_for_expr expr != Expr_Bool then
-		raise_expect_bool expr;
-	expr;
 ;;
 
 (* Check whether the array size is valid when define*)
@@ -596,24 +597,15 @@ let check_expr_op expr  =
 	debugmsg "Checking exp op\n";
 	match expr with
 	| Ebinop (expr1,op,expr2,expr_type) -> 
-		let optype = ref ( get_op_type op) in
+		let optype =  ( get_op_type op) in
 		let expr_type1 = (get_expr_type_for_expr expr1) in
 		let expr_type2 = (get_expr_type_for_expr expr2) in
-		debugmsg (sprintf "Reading op %s\n" (op_to_string op)) ;
-		
-		(* if optype is both to bool (the = or != op), we have to decide
-		 whether it is Op_type_bool_to_bool or Op_type_math_to_bool *)
-		if !optype  = Op_type_both_to_bool then
-			if expr_type1 == Expr_Int || expr_type1 == Expr_Float then
-				optype := Op_type_math_to_bool
-			else if expr_type1 == Expr_Bool then
-				optype := Op_type_bool_to_bool
-		;
 
+		debugmsg (sprintf "Reading op %s\n" (op_to_string op)) ;
 		debugmsg (sprintf "Checking exp, expr_type1=%s expr_type2=%s\n" 
 			(expr_type_tostring expr_type1)  (expr_type_tostring expr_type2));
 
-		match !optype with
+		match optype with
 		| Op_type_math_to_math | Op_type_math_to_bool -> 
 			(* Check if they are int or float, if not then thow the error *)
 			if (expr_type1 != Expr_Int && expr_type1 != Expr_Float) then
@@ -630,7 +622,7 @@ let check_expr_op expr  =
 	  		;
 
 	  		(* Set the expr type for the parent expr*)
-	  		match !optype with
+	  		match optype with
 	  		| Op_type_math_to_math ->
 				(* Set the expr type, if any is float then the parent is also float *)
 				if (expr_type1 == Expr_Float || expr_type2 == Expr_Float) then
@@ -645,13 +637,18 @@ let check_expr_op expr  =
 			| _ -> raise_dev_err "Invalid op type match";
 			;
 
+		| Op_type_both_to_bool ->
+			(* Both type must must match *)
+			if (expr_type1 != expr_type2) then
+				raise_compare_type_mismatch expr_type1 expr_type2;
+			Ebinop (expr1,op,expr2,Expr_Bool);
+
 		| Op_type_bool_to_bool -> 
 			if expr_type1 != Expr_Bool then
 				raise_expect_bool expr1;
 			if expr_type2 != Expr_Bool then
 				raise_expect_bool expr2;
 			Ebinop (expr1,op,expr2,Expr_Bool);
-		| _ -> raise_dev_err "Invalid op type match";
 		;
 
 	| _ -> expr;
@@ -693,6 +690,13 @@ let check_dec dec =
 	(typedef, get_expr_type_for_typedef typedef);
 ;;
 
+(* Check if the expr has the type bool, used in IF and While *)
+let check_expr_bool expr  =
+	if get_expr_type_for_expr expr != Expr_Bool then
+		raise_expect_bool expr;
+	expr;
+;;
+
 (* Assign expr_type for Eunop, just get the value from child and put to parent*)
 let assign_expr eunop =
 	match eunop with
@@ -702,4 +706,4 @@ let assign_expr eunop =
 	 | _ -> eunop ;
 ;;
 
-(* ----END Functions for parser----*)
+(* ----END Functions for parser---- *)

@@ -1,13 +1,17 @@
 proc logical(val int myval)
 	float a;
 	int b;
+	int c;
+	bool d;
+	bool e;
 
+	e:=true;
 
-	if a = 0.5 and b = 20.5 then
-		a:=- 99;
-	fi
 	c:= 55;
 
+	if c = b then 
+		write a;
+	fi
 	a:=- (99 - 888);
 
     if 30>40then
@@ -48,12 +52,12 @@ proc logical(val int myval)
 		a:=(2 - 3)/4;
 		a:=(2 - 3)+4;
 		a:=(2 - 3) - 4;
-		c:=(2 - 3.7) - 4;
+		a:=(2 - 3.7) - c;
 		#a:= true or false;
 		a:=2 + (3 - 4);
 
         #Need to omit all prenthesis
-        d:=(f and d) and f;
+        d:=(e and d) and e;
 
 
     fi
@@ -70,11 +74,11 @@ int n;
 	n:=2*(3*4);
 end
 
-proc function2()
+proc function2(ref int n)
 	n:=2*(3*4);
 end
 
-proc function3()
+proc function3(ref int a)
 	a:=2*(3*4);
 end
 
