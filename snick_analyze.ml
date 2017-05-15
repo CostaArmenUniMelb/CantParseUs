@@ -422,7 +422,7 @@ let check_typedef_range ttypedef =
 
 (* Call before parsing, prepare the symbol tables (main and invoke)*)
 let init_prog =
-	 debugmsg "Initiating";
+	 debugmsg "Initiating\n";
 	 (* Add symbol tbls for Proc and invoke *)
 	 add_tbl main_tbl (get_tblname Proc);
 	 add_tbl main_tbl (get_tblname Invoke);
@@ -433,6 +433,8 @@ let init_prog =
 (* The last function to run for checking "main" procedure and checking invoked procedures*)
 let finalize_prog prog =
 	debugmsg "Finalizing prog\n";
+
+	debugmsg "Checking 'main' proc\n";
 	(* Check if "main" proc exist *)
 	check_exist Proc "main";
 
@@ -444,16 +446,16 @@ let finalize_prog prog =
 
 	(*2. Check if the invoked procs is valid *)
 	(* get all ivoked procedure *)
+	debugmsg "Checking invoked procs\n";
 	let invoke_list = (get_symbol_list Invoke) in
 	let  num_of_invoke=  List.length(invoke_list) in
-	debugmsg (sprintf "Num of func %d\n" num_of_invoke);
+	debugmsg (sprintf "Num of invoked procs= %d\n" num_of_invoke);
 
 	for i = 0 to List.length(invoke_list) - 1  do 
-		debugmsg (sprintf "Check proc index %d\n" i);
+
  		let (invoke_sym_id,invoke_sim_object) = (List.nth invoke_list i) in
  		match  get_invoke_from_sym_tbl invoke_sim_object with
-
-		|InvokeProc (invoke_id, invoke_exprs) ->
+		| InvokeProc (invoke_id, invoke_exprs) ->
 			(*2.1 Check id invoked proc is exist *)
 			check_exist Proc invoke_id;
 
@@ -486,7 +488,7 @@ let add_proc proc_id=
 	debugmsg "Adding Proc\n";
 
 	check_not_exist Proc proc_id;
-	debugmsg ("Insert new proc " ^ proc_id ^ "\n");
+	debugmsg ("Insert a new sym tbl for" ^ proc_id ^ "\n");
 
 	(* Add the new sym table for this proc*)
 	add_tbl main_tbl proc_id ;
@@ -494,7 +496,6 @@ let add_proc proc_id=
 	(* Set  this proc to the current proc*)
 	set_current_tbl proc_id;
 
-	debugmsg "Adding Proc success\n";
 ;;
 
 (* Checking procedure, insert the Proc to the Proc symbol table *)
@@ -505,7 +506,6 @@ let check_proc proc =
 	(* insert this proc info to the Proc table*)
 	insert_symbol Proc proc_id (Proc_symbol proc);
 
-	debugmsg "Checking Proc success\n";
 	proc;
 ;;	
 
@@ -665,7 +665,7 @@ let check_param param =
 	(* save to symbol table*)
 	insert_symbol Current id (Param_symbol(reftype, typedef, get_expr_type_for_typedef typedef) );
 	debugmsg (sprintf "Param Type %s\n" ( expr_type_tostring ( get_expr_type_for_typedef typedef) ) ); 
-	debugmsg "Checking param success\n"; 
+
 	(reftype, typedef, get_expr_type_for_typedef typedef);
 ;;
 
@@ -686,7 +686,7 @@ let check_dec dec =
 	(* cast to param and save to symbol table*)
 	insert_symbol Current id (Param_symbol(Value, typedef,final_expr_type));
 	debugmsg (sprintf "Dec Type %s\n" ( expr_type_tostring ( final_expr_type) ) ); 
-	debugmsg "Checking dec success\n"; 
+
 	(typedef, get_expr_type_for_typedef typedef);
 ;;
 
