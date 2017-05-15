@@ -22,7 +22,7 @@ let raise_dev_err msg =
 
 (* ----Debugging---- *)
 
-let debugging = true;; (*Allow showing debug msgs*)
+let debugging = false;; (*Allow showing debug msgs*)
 
 (* Show  some messages for debugging *)
 let debugmsg msg = 
@@ -69,6 +69,7 @@ let init_main_tbl  =
 	let symbol_tbl = Hashtbl.create hash_size in
 	let dummy_data = Invoke_symbol(InvokeProc("p",[Elval(LId("n",Expr_None),Expr_None)]) )in 
 	(* Define type by adding a value as a dummy, then remove it (if don't do this the Ocaml compiler won't compile this) *)
+	(* Should fix this if there is more time*)
 	Hashtbl.add symbol_tbl "dummy" dummy_data ;
 	Hashtbl.remove symbol_tbl "dummy" ;
 	let main_sym_tbl =  Hashtbl.create hash_size in
@@ -318,6 +319,10 @@ let raise_expect_int expr =
 let raise_expect_math expr =
 	raise_syn_err (sprintf "The expected expression type must be Int or float but the actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
+;;
+
+let raise_not_expect_string dummy =
+	raise_syn_err (sprintf "The expression cannot be type String" );
 ;;
 
 let raise_main_mustnothave_params dummy =
@@ -604,6 +609,11 @@ let check_expr_op expr  =
 		debugmsg (sprintf "Reading op %s\n" (op_to_string op)) ;
 		debugmsg (sprintf "Checking exp, expr_type1=%s expr_type2=%s\n" 
 			(expr_type_tostring expr_type1)  (expr_type_tostring expr_type2));
+
+		(* Check if the expr is string, the bin op do not support string*)
+		if (expr_type1 == Expr_String || expr_type2 == Expr_String ) then
+			raise_not_expect_string ""
+		;
 
 		match optype with
 		| Op_type_math_to_math | Op_type_math_to_bool -> 
