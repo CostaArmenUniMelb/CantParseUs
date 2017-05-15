@@ -1,18 +1,21 @@
 ﻿namespace Snick
+(*converts a program ast into brill code*)
 module codegen =
-    let Debug = false
-
+    
+    (*creates new labels with a unique integer as a suffix*)
     module Label =
         let private Counter = ref 0
         let New(labelName:string) : string = 
             Counter := !Counter + 1
             labelName + string(!Counter)
 
+    (*All types relevant to code generation*)
     module Types =
         type Reg = int
 
         type SlotNum = int
 
+        (*brill built in function types*)
         type BuiltIn =
             | PrintString
             | PrintInt
@@ -24,6 +27,7 @@ module codegen =
 
         type Label = string
 
+        (*all brill instructions*)
         type Instr =
             | Call of string
             | Halt
@@ -70,19 +74,26 @@ module codegen =
             | LoadAddress of Reg * SlotNum
             | AddOffset of Reg * Reg * Reg
             | SubOffset of Reg * Reg * Reg
+            | Move of Reg * Reg 
 
         type Code = Instr list
 
         type VarId = string
 
+        (*variables (declerations and parameters) in a procedures environment*)
         type Var = {datatype:datatype; slotNum:SlotNum; passby:passby; typedef:type_def}
 
+        (*environment containing all variables*)
         type Env = Map<VarId, Var>
 
+        (*expression attributes. Parent nodes require data type and code from children during 
+        expresssion code generation*)
         type ExprAttr = {datatype:datatype; code:Code}
 
         type ProcId = string
 
+        (*holds all procedures and there parameter definitions. 
+        Used in code generation for procedure invocation with reference parameters*)
         type ProcParams = Map<ProcId, parameter_def list>
 
     open Types
@@ -90,26 +101,26 @@ module codegen =
     module ProcParams = 
         let Create : ProcParams = Map.empty
 
+        (*get paremeter definitions for a procedure*)
         let Find(procId:ProcId, procParams:ProcParams) : parameter_def list = 
             match procParams.TryFind procId with
             | Some(paramdefs) -> paramdefs
             | None ->  []
 
-        let Add(procId:ProcId, paramdef:parameter_def, procParams:ProcParams ref) = 
-            let paramdefs = Find(procId, !procParams)
-            procParams := (!procParams).Add(procId, paramdefs @ [paramdef])
-
+        (*add parameter definitions to a procedure*)
         let AddMany(procId:ProcId, paramdefs:parameter_def list, procParams:ProcParams ref) =
             let existing_paramdefs = Find(procId, !procParams)
             procParams := (!procParams).Add(procId, existing_paramdefs @ paramdefs)
 
         module PassBy =
+            (*gets the passby type (i.e. ref or val) for a procedure at a given argument index*)
             let ArgIndex(procId:ProcId, argIndex:int, procParams:ProcParams) : passby =
                 let paramdefs = Find(procId, procParams)
                 let paramdef = List.item(argIndex) paramdefs
                 let (passby, _ ) = paramdef
                 passby
 
+            (*is argument index in procedure passby ref*)
             let Ref(procId:ProcId, argIndex:int, procParams:ProcParams) : bool =
                 let passby = ArgIndex(procId, argIndex, procParams)
                 match passby with
@@ -118,6 +129,7 @@ module codegen =
     
     module BuiltIn =
         module To =
+            (*converts builtin brill types to it's string code form*)
             let String(builtin:BuiltIn) : string =
                 match builtin with
                 | BuiltIn.PrintInt -> "print_int"
@@ -129,25 +141,11 @@ module codegen =
                 | BuiltIn.ReadBool -> "read_bool"
 
     module Instruction =
-        module Single =
-            module Store =
-                let Code(passby:passby, reg:Reg, slotNum:SlotNum) : Code = 
-                    match passby with
-                    | Value -> []
-                    | Reference -> [StoreIndirect(reg,reg)]
-                    @
-                    [Store(slotNum, reg)]
-
-            module Load = 
-                let Code(passby:passby, reg:Reg, slotNum:SlotNum) : Code =
-                    match passby with
-                    | Value -> [Load(reg, slotNum)]
-                    | Reference -> [Load(reg, slotNum);LoadIndirect(reg, reg)]
-
-
         module To =
+            (*takes a single instruction and converts it to a list of instructions (Code)*)
             let Code(instr:Instr) : Code = [instr]
 
+            (*converts brill instruction type into it's printable brill code form*)
             let String(instr:Instr) : string =
                 match instr with
                 | IntConst(r, i) -> sprintf "int_const r%i, %i" r i
@@ -195,53 +193,73 @@ module codegen =
                 | LoadAddress(r,slotnum) -> sprintf "load_address r%i, %i" r slotnum
                 | AddOffset(r1,r2,r3) -> sprintf "add_offset r%i, r%i, r%i" r1 r2 r3
                 | SubOffset(r1,r2,r3) -> sprintf "sub_offset r%i, r%i, r%i" r1 r2 r3
+                | Move(r1, r2) -> sprintf "move r%i, r%i" r1 r2
                 |> (fun str -> 
                     match instr with
                     | Comment(_) -> str
                     | Label(_) -> str
                     | _ -> "   " + str
                     )
-
+    
     module Var =
+        (*helper function to create var record*)
         let Create(datatype:datatype, slotNum:SlotNum, passby:passby, typedef:type_def) : Var = 
             {datatype = datatype; slotNum = slotNum; passby = passby; typedef=typedef}
 
     module Env =
         let Init : Env = Map.empty 
 
+        (*get variable in procedure's environment*)
         let Find(varId:identifier, env:Env) : Var = 
             match env.TryFind(varId) with
             | Some(var) -> var
             | None -> failwith "cannot find var in environment"
 
+        (*add variable to environment*)
         let Add(varId:identifier, var:Var, env:Env) : Env =
             match env.TryFind(varId) with
             | Some(_) -> failwith (sprintf "var %s already exists" varId)
             | None -> env.Add(varId, var)
 
         module SlotNum =
+            (*gets slotnumber count in environment*)
             let Max(env:Env) : int = env.Count
         
         module To =
+            (*helper function for viewing the contents of an environment*)
             let String(env:Env) : string = 
                 env
                 |> Map.toList
-                |> List.map (fun (k,v) -> sprintf "%s %A %A" k (v.datatype) (v.slotNum))
+                |> List.map (fun (varId,var) -> sprintf "%s %A %A" varId (var.datatype) (var.slotNum))
                 |> String.concat "\n"
-                |> (fun s -> sprintf "\n-----Env-----\n%s\n-----Env-----\n" s)
+                |> (fun str -> sprintf "\n-----Env-----\n%s\n-----Env-----\n" str)
+        
+        module Var =
+            (*creates a variable and adds it to the environment*)
+            let Create(id:identifier, datatype:datatype, env:Env ref, passby:passby, slotNum:SlotNum ref, typedef:type_def) =
+                let decl_var = Var.Create(datatype,!slotNum, passby, typedef)
+                env := Add(id,decl_var,(!env))
+                slotNum := !slotNum + 1
 
     module Decleration =
+        (*gets datatype in decleration*)
         let Datatype(decl:decleration) : datatype = 
             match decl with
             | Single(datatype,_) -> datatype
             | Array(datatype,_,_) -> datatype
 
+        (*gets the identifier in a decleration*)
         let Id(decl:decleration) : identifier = 
             match decl with
             | Single(_,id) -> id
             | Array(_,id,_) -> id
 
         module Single =
+            (*generates code for the initialisation of single (not arrays) declared variables only.
+            Note that arrays are converted to singles prior to initialisation. 
+            i.e. Array(a[1..n]) = Single(a[1]),..,Single(a[n]).
+            Declared variables are initialised (i.e. int -> 0, bool -> false) into registers and 
+            then stored in a stack slot. Stackslots are pre-determined in the environment*)
             let Code(varId:VarId, env:Env) : Code = 
                 let decl_var = Env.Find(varId, env)
                 let decl_var_slotnum = decl_var.slotNum
@@ -259,30 +277,32 @@ module codegen =
                 store_instr
                 ]
             
+            (*Overloaded function for Single.Code above*)
             let Code1(decl:decleration, env:Env) : Code =
                 let decl_id = Id(decl)
                 Code(decl_id, env)
-
-            let Env(id:identifier, datatype:datatype, env:Env ref, passby:passby, slotNum:SlotNum ref, typedef:type_def) =
-                let decl_var = Var.Create(datatype,!slotNum, passby, typedef)
-                env := Env.Add(id,decl_var,(!env))
-                slotNum := !slotNum + 1
         
         module Array =
+            (*extracts out the ranges for an array decleration*)
             let Ranges(decl:decleration) : range list =
                 match decl with
                 | Single(_,_) -> failwith "singles do not have ranges"
                 | Array(_,_,ranges) -> ranges
             
+            (*extracts out all the min parts within a set of ranges*)
             let Mins(ranges:range list) = 
                 ranges 
                 |> List.map (fun (s,_) -> s)
 
+            (*for a set of ranges, calculates the size of each range*)
             let Sizes(ranges:range list) = 
                 ranges 
                 |> List.map (fun (s,e) -> e - s + 1)
 
             module Offset =
+                (*creates a snick expression for the row-major index into an 
+                array from a set of snick expressions which describe the position in a 
+                multidimensional array.*)
                 let Expr(decl:decleration, exprs:expr list) : expr = 
                     let exprs_count = exprs.Length
                     let ranges = Ranges(decl)
@@ -309,14 +329,17 @@ module codegen =
                         |> List.reduce (fun e1 e2 -> Ebinop(e1, binop.Op_add, e2))
                     offset_outer_sum(exprs_count, exprs, ranges_sizes)
                     
-                
-                let Int(ranges:range list) : int =
-                    ranges 
-                    |> List.map (fun (rmin, rmax) -> rmax - rmin + 1) 
-                    |> List.reduce (fun n1 n2 -> n1 * n2)
-
+            (*calculates the size of a multidimensional array*)
+            let Size(ranges:range list) : int =
+                ranges 
+                |> List.map (fun (rmin, rmax) -> rmax - rmin + 1) 
+                |> List.reduce (fun n1 n2 -> n1 * n2)
+            
+            (*creates a set of var names for all elements of a multidimensional array.
+            the first var has no suffix and all var names after it have a sequential number
+            as a suffix. i.e. varName, varName2, varName3,.., varNameN *)
             let VarNames(varName:string, ranges:range list) : string list =
-                [for i in 0..Offset.Int(ranges) -> i]
+                [for i in 0..Size(ranges) -> i]
                 |> List.map(fun i ->
                     let varName = 
                         if i = 0 
@@ -325,47 +348,52 @@ module codegen =
                     varName
                     )
 
-
+            (*creates variables for the environment for all elements of a multidimensional array*)
             let Env(id:identifier,datatype:datatype,env:Env ref, passby:passby, slotNum:SlotNum ref,ranges:range list) =
                 VarNames(id, ranges)
                 |> List.iter(fun varName ->
-                    Single.Env(varName,datatype, env, passby, slotNum, Array(datatype, id, ranges))
+                    Env.Var.Create(varName,datatype, env, passby, slotNum, Array(datatype, id, ranges))
                     )
 
-            let Code1(decl:decleration, env:Env) : Code =
+            (*generates code for the intialisation of all elements in a multidimensional array*)
+            let Code(decl:decleration, env:Env) : Code =
                 let decl_id = Id(decl)
                 let decl_ranges = Ranges(decl)
                 VarNames(decl_id, decl_ranges)
                 |> List.map(fun varName -> Single.Code(varName, env) )
                 |> List.concat
         
+        (*determines the size of a decleration taking into account the size of multidimensional array types*)
         let Count(decl:decleration): int = 
             match decl with
             | Single(_,_) -> 1
-            | Array(_,_,ranges) -> Array.Offset.Int(ranges)
+            | Array(_,_,ranges) -> Array.Size(ranges)
                 
 
     module Declerations =           
+        (*generates code for all declared variable initialisations*)
         let Code(decls:decleration list, env:Env) : Code =
             decls
             |> List.map (fun decl -> 
                 match decl with
                 | Single(_,_) -> Decleration.Single.Code1(decl, env)
-                | Array(_,_,_) -> Decleration.Array.Code1(decl, env)
+                | Array(_,_,_) -> Decleration.Array.Code(decl, env)
                 )
             |> List.concat
 
+        (*adds declared variables to the environment*)
         let Env(decls:decleration list, env:Env ref) =
             let slotNum = ref (Env.SlotNum.Max(!env))
             decls 
             |> List.iter (fun decl -> 
                 match decl with
                 | Single(datatype,id) -> 
-                    Decleration.Single.Env(id,datatype, env, Value, slotNum, Single(datatype, id))
+                    Env.Var.Create(id,datatype, env, Value, slotNum, Single(datatype, id))
                 | Array(datatype,id,ranges) -> 
                     Decleration.Array.Env(id, datatype, env, Value, slotNum, ranges)
                 )
 
+        (*determines the total number of declerations with multidimensional arrays flattened*)
         let Count(decls:decleration list): int = 
             match decls with
             | [] -> 0
@@ -375,32 +403,36 @@ module codegen =
                 |> List.reduce (fun n1 n2 -> n1 + n2)
 
     module LValue =
+        (*extracts out the identifier in the lvalue type*)
         let Id(lv:lvalue) : identifier = 
             match lv with
             | LId(id) -> id
             | LArrayElement(id,_) -> id
 
     module Expr =
-        
         module Unop =
             module Int = 
+                (*generates code for a unary integer expression*)
                 let Code(unop:unop, reg:Reg, reg2:Reg) : Code =
                     match unop with
                     | Op_minus -> [IntConst(reg2,-1);MulInt(reg,reg,reg2)]
                     | _ -> failwith "cannot unop a non minus with int"
 
             module Real =
+                (*generates code for a unary real expression*)
                 let Code(unop:unop, reg:Reg, reg2:Reg) : Code =
                     match unop with
                     | Op_minus -> [RealConst(reg2,-1.0);MulReal(reg,reg,reg2)]
                     | _ -> failwith "cannot unop a non minus with real"
 
             module Bool =
+                (*generates code for a unary bool expression*)
                 let Code(unop:unop, reg:Reg, reg2:Reg) : Code =
                     match unop with
                     | Op_not -> [Not(reg,reg)]
                     | _ -> failwith "cannot unop a non not with bool"
-
+            
+            (*delegates code generation based on type of expression*)
             let Code(datatype1:datatype, unop:unop, reg:Reg) : Code =
                 let reg2 = reg + 1
                 match datatype1 with
@@ -411,6 +443,8 @@ module codegen =
 
         module Binop =
             module Number =
+                (*determines resultant type of binary expression based on the types
+                of it's sub expressions. *)
                 let Type(datatype1:datatype, binop:binop, datatype2:datatype) : datatype =
                     match datatype1, datatype2 with
                     | datatype.Int, datatype.Int -> datatype.Int
@@ -421,6 +455,7 @@ module codegen =
                     | _ -> failwith "cannot perform arithmetic and comparison on non numbers"
 
                 module Int =    
+                    (*generates code for integer binary expressions*)
                     let Code(binop:binop, reg1:Reg, reg2:Reg) : Code =
                         match binop with
                         | Op_add -> AddInt(reg1, reg1, reg2)
@@ -438,6 +473,7 @@ module codegen =
                         |> Instruction.To.Code
 
                 module Real =
+                    (*generates code for real binary expressions*)
                     let Code(binop:binop, reg1:Reg, reg2:Reg) : Code =
                         match binop with
                         | Op_add -> AddReal(reg1, reg1, reg2)
@@ -454,12 +490,15 @@ module codegen =
                         |> Instruction.To.Code
 
             module Logical =
+                (*determines resultant type of binary logical expression based on the types
+                of it's sub expressions. *)
                 let Type(datatype1:datatype, binop:binop, datatype2:datatype) : datatype =
                     match datatype1, datatype2 with
                     | datatype.Bool, datatype.Bool -> datatype.Bool
                     | datatype.Int, datatype.Int -> datatype.Int
-                    | _ -> failwith "cannot perform logical ops on non booleans"
+                    | _ -> failwith "cannot perform logical ops on non booleans/integers"
 
+                (*generates code for logical binary expressions*)
                 let Code(binop:binop, reg1:Reg, reg2:Reg) : Code =
                     match binop with
                     | Op_and -> And(reg1, reg1, reg2)
@@ -469,6 +508,7 @@ module codegen =
                     | _ -> failwith "cannot non bool binop with bool"
                     |> Instruction.To.Code
 
+            (*determines the type for a binary expression*)
             let Type(datatype1:datatype, binop:binop, datatype2:datatype) : datatype =
                 match binop with
                 | Op_add | Op_sub | Op_div | Op_mul | Op_not_eq 
@@ -476,7 +516,10 @@ module codegen =
                     Number.Type(datatype1, binop, datatype2)
                 | Op_or | Op_and -> 
                     Logical.Type(datatype1, binop, datatype2)
-
+            
+            (*generates code for binary expressions. Note that integers are converted to floats in cases
+            where there is a mix of float and int. This function delegates the code generation based on 
+            the type of expression (int, float or bool)*)
             let Code(datatype1:datatype, binop:binop, datatype2:datatype, reg1:Reg, reg2:Reg) : Code =
                 match datatype1, datatype2 with
                 | datatype.Int, datatype.Int -> Number.Int.Code(binop, reg1, reg2)
@@ -487,14 +530,18 @@ module codegen =
                 | _ -> failwith "binops require bool-bool, int-int, int-float, float-int, or float-float datatypes"
         
         module Attr =
+            (*helper function for creating expression attribute (datatype and code)*)
             let Create(code:Code, datatype:datatype) : ExprAttr =
                 {
                     code = code
                     datatype = datatype
                 }
-
-        let rec ExprAttr(expr:expr, reg:Reg, env:Env) : ExprAttr = 
+        
+        (*traverses an expression tree and returns an annotated version with datatypes
+        and brill code (expression attribute tree) *)
+        let rec ExprAttr(expr:expr, reg:Reg, env:Env, proc_arg_passby:passby) : ExprAttr = 
             match expr with
+            (*bool expressions are represented by integer constants in brill*)
             | expr.Ebool(b) ->
                 let bool_as_int =
                     match b with
@@ -518,20 +565,24 @@ module codegen =
             | expr.Ebinop(expr1,binop,expr2) -> 
                 let place_1 = reg
                 let place_2 = reg + 1
-                let expr1_attr = ExprAttr(expr1, place_1, env)
-                let expr2_attr = ExprAttr(expr2, place_2, env)
-                let binop_code = Binop.Code(expr1_attr.datatype, binop, expr2_attr.datatype, place_1, place_2)
-                let expr_code = expr1_attr.code @ expr2_attr.code @ binop_code
+                let expr1_attr = ExprAttr(expr1, place_1, env, proc_arg_passby)
+                let expr2_attr = ExprAttr(expr2, place_2, env, proc_arg_passby)
+                let expr1_code = expr1_attr.code
+                let expr2_code = expr2_attr.code
+                let expr1_datatype = expr1_attr.datatype
+                let expr2_datatype = expr2_attr.datatype
+                let binop_code = Binop.Code(expr1_datatype, binop, expr2_datatype, place_1, place_2)
+                let expr_code = expr1_code @ expr2_code @ binop_code
                 let expr_datatype = Binop.Type(expr1_attr.datatype, binop, expr2_attr.datatype)
                 Attr.Create(expr_code, expr_datatype)
 
             | expr.Eunop(unop, expr) -> 
-                let expr_attr = ExprAttr(expr, reg, env)
-                let expr_attr_code = expr_attr.code
-                let expr_attr_datatype = expr_attr.datatype
+                let expr_attr = ExprAttr(expr, reg, env, proc_arg_passby)
+                let expr_code = expr_attr.code
+                let expr_datatype = expr_attr.datatype
                 let unop_code = Unop.Code(expr_attr.datatype, unop, reg)
-                let code = expr_attr_code @ unop_code
-                Attr.Create(code, expr_attr_datatype)
+                let code = expr_code @ unop_code
+                Attr.Create(code, expr_datatype)
                 
             | expr.Elval(lv) ->
                 let lv_var = Env.Find(LValue.Id(lv),env)
@@ -541,23 +592,34 @@ module codegen =
                 let lv_var_passby = lv_var.passby
                 match lv with
                 | LId(id) -> 
-                    let load_code = Instruction.Single.Load.Code(lv_var_passby, reg, lv_var_slotNum)
+                    let load_code = 
+                        (*if the variable is passed by reference then the variable must be dereferenced 
+                        (using LoadIndirect) before use*)
+                        match lv_var_passby with
+                        | Value -> [Load(reg, lv_var_slotNum)]
+                        | Reference -> [Load(reg, lv_var_slotNum);LoadIndirect(reg, reg)]
                     Attr.Create(load_code, lv_var_datatype)
                 | LArrayElement(id, exprs) -> 
                     let offset_expr = Decleration.Array.Offset.Expr(lv_var_typedef, exprs)
-                    let offset_expr_attr = ExprAttr(offset_expr, reg, env)
+                    let offset_expr_attr = ExprAttr(offset_expr, reg, env, proc_arg_passby)
                     let offset_expr_code = offset_expr_attr.code
+                    let address_reg = reg + 1
+                    (*if the array element is being used in a procedure invocation where
+                    the argument is pass by reference, then the address must be used.*)
+                    let proc_arg_passby_load_code =
+                        match proc_arg_passby with
+                        | Value -> LoadIndirect(reg, address_reg)
+                        | Reference -> Move(reg, address_reg)
                     let load_code = 
-                        let address_reg = reg + 1
                         [
                         LoadAddress(address_reg, lv_var_slotNum)
                         SubOffset(address_reg, address_reg, reg)
-                        LoadIndirect(reg, address_reg)
+                        proc_arg_passby_load_code
                         ]
                     let code = offset_expr_code @ load_code
                     Attr.Create(code, lv_var_datatype)
 
-            | expr.Eparens(expr) -> ExprAttr(expr, reg, env)
+            | expr.Eparens(expr) -> ExprAttr(expr, reg, env, proc_arg_passby)
     
     module RValue =
         let Expr(rv:rvalue) : expr =
@@ -572,7 +634,7 @@ module codegen =
                 | datatype.Float -> CallBuiltIn(BuiltIn.PrintReal)
                 | datatype.Int -> CallBuiltIn(BuiltIn.PrintInt)
                 | datatype.String -> CallBuiltIn(BuiltIn.PrintString)
-
+        
         module Read = 
             let Instr(datatype:datatype) : Instr =
                 match datatype with
@@ -582,13 +644,15 @@ module codegen =
                 | datatype.String -> failwith "cannot read string"
 
         let rec Code(stmt:statement, env:Env, procParams:ProcParams) : Code =
-            let stmts_code(stmts) =
+            (*generates code for multiple statements*)
+            let stmts_code(stmts : statement list) =
                 stmts 
                 |> List.map (fun stmt -> Code(stmt, env, procParams))
                 |> List.concat
+           
             match stmt with
             | Write(expr) -> 
-                let expr_attr = Expr.ExprAttr(expr, 0, env)
+                let expr_attr = Expr.ExprAttr(expr, 0, env, Value)
                 let expr_code = expr_attr.code
                 let write_code = [Write.Instr(expr_attr.datatype)]
                 let comment_code = [Comment("write")]
@@ -604,8 +668,9 @@ module codegen =
                 let lv_var_datatype = lv_var.datatype
                 let lv_var_decl = lv_var.typedef
                 let rv_reg = 0
-                let rv_expr_attr = Expr.ExprAttr(RValue.Expr(rv),rv_reg,env)
+                let rv_expr_attr = Expr.ExprAttr(RValue.Expr(rv),rv_reg,env,Value)
                 let rv_datatype = rv_expr_attr.datatype
+                (*ensures that integers can be assigned to reals*)
                 let rv_convert_code = 
                     match lv_var_datatype, rv_datatype with
                     | datatype.Float, datatype.Int -> [IntToReal(rv_reg,rv_reg)]
@@ -615,13 +680,15 @@ module codegen =
                 let store_code = 
                     match lv with
                     | LId(_) -> 
+                        (*storing/assign instructions depend on whether the identifier is
+                        a parameter that's passed by value or reference*)
                         match lv_var.passby with
                         | Value -> [Store(lv_var_slotNum, rv_reg)]
                         | Reference -> [Load(1,lv_var_slotNum);StoreIndirect(1,rv_reg)]
                     | LArrayElement(_,exprs) -> 
                         let offset_expr = Decleration.Array.Offset.Expr(lv_var_decl, exprs)
                         let offset_expr_reg = 1
-                        let offset_expr_attr = Expr.ExprAttr(offset_expr, offset_expr_reg, env)
+                        let offset_expr_attr = Expr.ExprAttr(offset_expr, offset_expr_reg, env, Value)
                         let offset_expr_code = offset_expr_attr.code
                         let array_address_reg = 3
                         offset_expr_code
@@ -641,7 +708,13 @@ module codegen =
                 let lv_var = Env.Find(LValue.Id(lv), env)
                 let lv_var_datatype = lv_var.datatype
                 let lv_var_slotNum = lv_var.slotNum
-                let store_code = Instruction.Single.Store.Code(lv_var.passby, 0, lv_var.slotNum)
+                (*convert address to value if identifier is a parameter passed by reference*)
+                let store_code = 
+                    match lv_var.passby with
+                    | Value -> []
+                    | Reference -> [StoreIndirect(0,0)]
+                    @
+                    [Store(lv_var.slotNum, 0)]
                 let read_code = [Read.Instr(lv_var_datatype)]
                 let comment_code = [Comment("read")]
                 [
@@ -651,7 +724,7 @@ module codegen =
                 ]
                 |> List.concat
             | IfThen(expr,stmts) ->
-                let expr_code = Expr.ExprAttr(expr, 0, env).code
+                let expr_code = Expr.ExprAttr(expr, 0, env, Value).code
                 let then_label_string = Label.New("then")
                 let then_label_code = [Instr.Label(then_label_string)]
                 let branch_on_false_code = [BranchOnFalse(0, then_label_string)]
@@ -666,7 +739,7 @@ module codegen =
                 ]
                 |> List.concat
             | IfThenElse(expr,then_stmts,else_stmts) ->
-                let expr_code = Expr.ExprAttr(expr, 0, env).code
+                let expr_code = Expr.ExprAttr(expr, 0, env, Value).code
                 let else_label_string = Label.New("else")
                 let else_label_code = [Instr.Label(else_label_string)]
                 let branch_on_false_code = [BranchOnFalse(0, else_label_string)]
@@ -687,7 +760,7 @@ module codegen =
                 |> List.concat
                 |> (fun c -> [Comment("ifThenElse")]@c)
             | WhileDo(expr, stmts) ->
-                let expr_code = Expr.ExprAttr(expr, 0, env).code
+                let expr_code = Expr.ExprAttr(expr, 0, env, Value).code
                 let after_label_string = Label.New("after")
                 let after_label_code = [Instr.Label(after_label_string)]
                 let branch_on_false_code = [BranchOnFalse(0, after_label_string)]
@@ -708,23 +781,28 @@ module codegen =
                 |> List.concat
             | InvokeProc(id, exprs) -> 
                 let call_code = [Call(id)]
+                (*the index of each expression argument in the procedure invocation must match the
+                register number. i.e. argument 1's value/address must go in register 1.*)
                 let reg = ref -1
                 let exprs_code = 
                     exprs 
                     |> List.map (fun expr -> 
                         reg := !reg + 1
+                        (*gets the passby for the current argument index*)
+                        let proc_arg_passby = ProcParams.PassBy.ArgIndex(id, !reg, procParams)
                         match expr with
                         | Elval(lv) -> 
                             match lv with
                             | LId(_) -> 
                                 let lv_var = Env.Find(LValue.Id(lv),env)
                                 let lv_var_slotNum = lv_var.slotNum
-                                let proc_arg_passby = ProcParams.PassBy.ArgIndex(id, !reg, procParams)
+                                (*if the argument index is a passby reference, an address must be stored in
+                                the register*)
                                 match proc_arg_passby with
                                 | Value -> [Load(!reg, lv_var_slotNum)]
                                 | Reference -> [LoadAddress(!reg, lv_var_slotNum)]
-                            | LArrayElement(_,_) -> Expr.ExprAttr(expr, !reg, env).code
-                        | _ -> Expr.ExprAttr(expr, !reg, env).code
+                            | LArrayElement(_,_) -> Expr.ExprAttr(expr, !reg, env, proc_arg_passby).code
+                        | _ -> Expr.ExprAttr(expr, !reg, env, Value).code
                         )    
                     |> List.concat
                 let comment_code = [Comment("InvokeProc")]
@@ -735,34 +813,43 @@ module codegen =
                 ]
                 |> List.concat
     module Statements =
+        (*generates code for all statements*)
         let Code(stmts:statement list, env:Env, procParams:ProcParams) : Code = 
             stmts 
             |> List.map (fun s -> Statement.Code(s, env, procParams))
             |> List.concat
 
     module ProcedureBody =
+        (*extracts out the declerations from a procedure body*)
         let Decls(pb:procedure_body) : decleration list =
             let (decls, _) = pb
             decls
 
+        (*extracts out the statements from a procedure body*)
         let Stmts(pb:procedure_body) : statement list = 
             let (_,stmts) = pb
             stmts
             
     module ParameterDef =   
+        (*extracts out the passby type for a parameter definition*)
         let PassBy(paramDef:parameter_def) : passby = 
             let (passby,_) = paramDef
             passby
         
+        (*extracts out the type definition for a parameter definition*)
         let TypeDef(paramDef:parameter_def) : type_def = 
             let (_,typeDef) = paramDef
             typeDef
 
+        (*extracts out the identifier for a parameter definition*)
         let Id(paramDef:parameter_def) : identifier =
             let paramdef_typedef = TypeDef(paramDef)
             Decleration.Id(paramdef_typedef)
         
         module Single =
+            (*when a procedure is invoked, parameters in the calling procedure are
+            stored in rgeisters. In the callee procedure, these values are stored in
+            the stack for reuse.*)
             let Code(id:identifier, reg:Reg ref, env:Env) : Code = 
                 reg := !reg + 1
                 let var = Env.Find(id, env)
@@ -770,6 +857,8 @@ module codegen =
                 [Store(var_slotNum, !reg)]
 
     module ParameterDefs =
+        (*determines the total number of single parameters taking into account 
+        multidimensional arrays.*)
         let Count(paramDefs:parameter_def list) : int =
             match paramDefs with
             | [] -> 0
@@ -779,10 +868,11 @@ module codegen =
                     let paramdef_typedef = ParameterDef.TypeDef(paramDef)
                     match paramdef_typedef with
                     | Single(_,_) -> 1
-                    | Array(_,_,ranges) -> Decleration.Array.Offset.Int(ranges)                
+                    | Array(_,_,ranges) -> Decleration.Array.Size(ranges)                
                     )
                 |> List.reduce (fun n1 n2 -> n1 + n2)
 
+        (*adds parameter definitions to the environment*)
         let Env(paramDefs:parameter_def list, env:Env ref) = 
             let slotNum = ref 0
             paramDefs
@@ -791,10 +881,11 @@ module codegen =
                 let param_passby = ParameterDef.PassBy(paramdef)
                 match paramdef_typedef with
                 | Single(datatype,id) -> 
-                    Decleration.Single.Env(id, datatype, env, param_passby, slotNum, Single(datatype,id))
-                | Array(datatype,id,ranges) -> failwith "cannot pass array as param"
+                    Env.Var.Create(id, datatype, env, param_passby, slotNum, Single(datatype,id))
+                | Array(_,_,_) -> failwith "cannot pass array as param"
                 )
 
+        (*generates code for single and array parameters (register to stack instructions)*)
         let Code(paramDefs:parameter_def list, env:Env) : Code = 
             let reg = ref -1
             paramDefs
@@ -804,7 +895,7 @@ module codegen =
                 | Single(datatype,id) -> 
                     ParameterDef.Single.Code(id, reg, env)
                 | Array(datatype,id,ranges) ->
-                    let slotNums = Decleration.Array.Offset.Int(ranges)
+                    let slotNums = Decleration.Array.Size(ranges)
                     [for i in 0..slotNums -> i]
                     |> List.map(fun i ->
                         let varName = 
@@ -818,46 +909,50 @@ module codegen =
             |> List.concat
 
     module Procedure =
+        (*extracts out the identifier for a procedure*)
         let Id(p:procedure) : identifier = 
             let (id,_,_) = p
             id
 
+        (*extracts out the procedure body from a procedure*)
         let Body(p:procedure): procedure_body =
             let (_,_,pb) = p
             pb
 
+        (*extracts out the declerations from a procedure*)
         let Decls(p:procedure) : decleration list = ProcedureBody.Decls(Body(p))
         
+        (*extracts out the statements from a procedure*)
         let Stmts(p:procedure) : statement list = ProcedureBody.Stmts(Body(p))
         
+        (*extracts out the parameter definitions from a procedure*)
         let ParamDefs(p:procedure) : parameter_def list = 
             let (_,paramdefs,_) = p
             paramdefs
 
+        (*adds a procedure and it's parameters to the procedure-parameters data map*)
         let ProcParam(p:procedure, procParams:ProcParams ref) = 
             let procId = Id(p)
             let paramdefs = ParamDefs(p)
             ProcParams.AddMany(procId, paramdefs, procParams)
 
+        (*generates code for a procedure. calculates the stack frame size for
+        push/pop and adds parameters/declerations to an environment*)
         let Code(p:procedure, procParams:ProcParams) : Code = 
             let decls = Decls(p)
             let stmts = Stmts(p)
             let env = ref Env.Init
             let paramdefs = ParamDefs(p)
-//            let decl_count = Declerations.Count(decls)
-//            let paramdef_count = ParameterDefs.Count(paramdefs)
-//            let var_count = decl_count + paramdef_count
             ParameterDefs.Env(paramdefs, env)
             Declerations.Env(decls, env)
             let var_count = (!env).Count
-            if Debug then Env.To.String(!env) |> System.Console.WriteLine
             let decl_code = Declerations.Code(decls, !env)
             [
             [
-                Label(Id(p))
-                Comment("prologue")
-                PushStackFrame(var_count)
-                Comment("parameters")
+            Label(Id(p))
+            Comment("prologue")
+            PushStackFrame(var_count)
+            Comment("parameters")
             ]
             ParameterDefs.Code(paramdefs, !env)
             [Comment("declerations")]
@@ -865,19 +960,22 @@ module codegen =
             [Comment("statements")]
             Statements.Code(stmts, !env, procParams)
             [
-                Comment("epilogue")
-                PopStackFrame(var_count)
-                Return
+            Comment("epilogue")
+            PopStackFrame(var_count)
+            Return
             ]
             ]
             |> List.concat
 
     module Procedures =
+        (*creates procedure-parameters data map for all procedures in program*)
         let ProcParam(procs:procedure list, procParams:ProcParams ref) =
             procs
             |> List.iter (fun proc -> Procedure.ProcParam(proc, procParams)) 
 
+        (*generates code for all procedures*)
         let Code(procs:procedure list) : Code =
+            (*creates procedure-parameters map for use in procedure invocation*)
             let procParams = ref (ProcParams.Create)
             ProcParam(procs, procParams)
             procs
@@ -885,6 +983,7 @@ module codegen =
             |> List.concat
 
     module Program =
+        (*generates code for entire program*)
         let Code(program:program) : Code = 
             [
             Call("main")
@@ -892,7 +991,8 @@ module codegen =
             ]
             @
             Procedures.Code(program)
-
+    
+    (*generates code and formats as string*)
     let Generate(program:program) : string =
         Program.Code(program)
         |> List.map (fun i -> Instruction.To.String(i)) 
