@@ -1,8 +1,8 @@
 (*
 Author: Songpoom Rasdussadee 
 Purpose: Snick_analyze is used for syntax checking e.g. type matching between expressions
-as well as  storing procedures and their parameters in the appropriate symbol tables so that 
-the Snick_codegen  can use it for generateing the IR code
+as well as storing procedures and their parameters in the appropriate symbol tables so that 
+the Snick_codegen can use it for generateing the IR code
 *)
 open Printf 
 open Snick_ast
@@ -260,7 +260,7 @@ let raise_compare_type_mismatch expr_type1 expr_type2 =
 
 
 let raise_invok_param_type_mismatch invokeid expr_type1 expr_type2 = 
-	raise_syn_err (sprintf "The formal and actual parameter type mismatch for procedure '%s'.Expected %s but the actual is %s" 
+	raise_syn_err (sprintf "Formal and Actual parameter type mismatch for procedure '%s'. Expected is %s but Actual is %s" 
 						invokeid
 						(expr_type_tostring expr_type1)
 						(expr_type_tostring expr_type2)
@@ -268,7 +268,7 @@ let raise_invok_param_type_mismatch invokeid expr_type1 expr_type2 =
 ;;
 
 let raise_invalid_arraysize min max =
-	raise_syn_err (sprintf "Invalid Array Size: %d and %d" min max);
+	raise_syn_err (sprintf "Invalid Array Size %d and %d" min max);
 ;;
 
 let raise_need_index id =
@@ -280,26 +280,26 @@ let raise_no_need_index id =
 ;;
 
 let raise_out_of_bound min max index=
-	raise_syn_err (sprintf "Index out of bound, possible values are %d and %d but the index is %d"
+	raise_syn_err (sprintf "Index out of bound, Expected is between %d and %d but Actual is %d"
 			 min max index);
 ;;
 
 let raise_num_of_param_mismatch id expected actual =
-	raise_syn_err (sprintf "Number of params for procedure '%s' does not match. The expected is %d but the actual is %d"
+	raise_syn_err (sprintf "Number of params for procedure '%s' does not match. Expected is %d but Actual is %d"
 			id expected actual);
 ;;
 
 let raise_num_of_indices_mismatch expected actual =
-	raise_syn_err (sprintf "Number of indices does not match. The expected is %d but the actual is %d" 
+	raise_syn_err (sprintf "Number of indices does not match. Expected is %d but Actual is %d" 
 			expected actual);
 ;;
 
 let raise_not_exist id =
-	raise_syn_err (sprintf "'%s' does not exist" id);
+	raise_syn_err (sprintf "'%s' is undefined" id);
 ;;
 
 let raise_already_exist id =
-	raise_syn_err (sprintf "'%s' has been already declared" id);
+	raise_syn_err (sprintf "'%s' is already defined" id);
 ;;
 
 let raise_zero_division dummy =
@@ -307,26 +307,26 @@ let raise_zero_division dummy =
 ;;
 
 let raise_expect_bool expr =
-	raise_syn_err (sprintf "The expected expression type must be Boolean but the actual expression is %s" 
+	raise_syn_err (sprintf "Expected expression type must be Boolean but Actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_int expr =
-	raise_syn_err (sprintf "The expected expression type must be Int but the actual expression is %s" 
+	raise_syn_err (sprintf "Expected expression type must be Int but Actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_expect_math expr =
-	raise_syn_err (sprintf "The expected expression type must be Int or float but the actual expression is %s" 
+	raise_syn_err (sprintf "Expected expression type must be Int or float but Actual expression is %s" 
 		(expr_type_tostring (get_expr_type_for_expr expr)) );
 ;;
 
 let raise_not_expect_string dummy =
-	raise_syn_err (sprintf "The expression cannot be type String" );
+	raise_syn_err (sprintf "Expression cannot be String" );
 ;;
 
 let raise_main_mustnothave_params dummy =
-	raise_syn_err (sprintf "The 'main' procedure must not contain any parameters");
+	raise_syn_err (sprintf "'main' procedure must not contain any parameters");
 ;;
 
 (* ----END Error raising----*)
