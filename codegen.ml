@@ -124,8 +124,15 @@ module ProcParams = struct
   (*get paremeter definitions for a procedure*)
   let find ((procId:procId), (procParams:procParams)) : parameter_def list = 
     procParams 
-		|> List.find (fun (pId, _) -> pId = procId)
-		|> (fun (_,paramDefs) -> paramDefs)
+	|> List.filter (fun (pId, _) -> pId = procId)
+	|> (fun procs ->
+   		match procs with
+        | [] -> []
+        | h::t -> 
+          let (_,paramDefs) = h
+          in
+          paramDefs
+    	)
 
   (*add parameter definitions to a procedure*)
   let addMany((procId:procId), (paramdefs:parameter_def list), (procParams:procParams ref)) =
@@ -772,7 +779,7 @@ module Statement = struct
             | Value -> []
             | Reference -> [StoreIndirect(0,0)]
             @
-            [Store(lv_var.slotNum, 0)] in
+            [Store(lv_var_slotNum, 0)] in
         let read_code = [Read.instr(lv_var_datatype)] in
         let comment_code = [Comment("read")] in
         [
@@ -852,21 +859,30 @@ module Statement = struct
               reg := !reg + 1;
               (*gets the passby for the current argument index*)
               let proc_arg_passby = ProcParams.PassBy.argIndex(id, !reg, procParams) in
+              let code = (Expr.exprAttr(expr, !reg, env, Value)).code in
               match expr with
-              | Elval(lv,_) -> 
-                  match lv with
-                  | LId(_,_) -> 
-                      let lv_var = Env.Var.find(LValue.id(lv),env) in
-                      let lv_var_slotNum = lv_var.slotNum in
-                      (*if the argument index is a passby reference, an address must be stored in
-                      the register*)
-                      let code = 
-  											match proc_arg_passby with
-                        | Value -> [Load(!reg, lv_var_slotNum)]
-                        | Reference -> [LoadAddress(!reg, lv_var_slotNum)] in
-											code
-                  | LArrayElement(_,_,_) -> (Expr.exprAttr(expr, !reg, env, proc_arg_passby)).code
-              | _ -> (Expr.exprAttr(expr, !reg, env, Value)).code
+                | Elval(lv,_) -> 
+                  let elval_code =
+                  	match lv with
+                    | LId(_,_) -> 
+                        let lv_var = Env.Var.find(LValue.id(lv),env) in
+                        let lv_var_slotNum = lv_var.slotNum in
+                        (*if the argument index is a passby reference, an address must be stored in
+                        the register*)
+                        let code = 
+    					  match proc_arg_passby with
+                          | Value -> [Load(!reg, lv_var_slotNum)]
+                          | Reference -> [LoadAddress(!reg, lv_var_slotNum)] in
+  						code
+                    | LArrayElement(_,_,_) -> (Expr.exprAttr(expr, !reg, env, proc_arg_passby)).code in
+                  elval_code
+                | Estring(_,_) -> code
+                | Ebool(_,_) -> code
+                | Eint(_,_) -> code
+                | Efloat(_,_) -> code
+                | Ebinop(_,_,_,_) -> code
+                | Eunop(_,_,_) -> code
+                | Eparens(_,_) -> code
               )    
           |> List.concat in
       let comment_code = [Comment("InvokeProc")] in
