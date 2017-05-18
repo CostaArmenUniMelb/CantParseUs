@@ -1,5 +1,5 @@
 module P = Snick_parse
-open Snick_analyze
+open Snick_symbol
 
 (* Argument parsing code *)
 let infile_name = ref None

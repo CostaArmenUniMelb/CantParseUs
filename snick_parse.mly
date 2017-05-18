@@ -7,9 +7,10 @@ It defines
 
 %{
 open Snick_ast
+open Snick_symbol
 open Snick_analyze
 
-let main_tbl = Snick_analyze.init_main_tbl;;
+let main_tbl = init_main_tbl;;
 %}
 
 /*Variables*/
@@ -74,17 +75,17 @@ let main_tbl = Snick_analyze.init_main_tbl;;
 /* Rules */
 
 program_with_sym_tbl:
-  | program { ($1, Snick_analyze.get_main_sym_tbl) }
+  | program { ($1, get_main_sym_tbl) }
 
 program:
-  | procedures { Snick_analyze.init_prog; Snick_analyze.finalize_prog ( $1 ) } 
+  | procedures { init_prog; finalize_prog ( $1 ) } 
 
 procedures:
   | procedures procedure { $2 :: $1 }
   | procedure { [$1] }
 
 procedure:
-  | PROC procedure_define LPAREN parameter_defs RPAREN procedure_body END {add_proc($2); Snick_analyze.check_proc ( $2, List.rev $4, $6 )  }
+  | PROC procedure_define LPAREN parameter_defs RPAREN procedure_body END {add_proc($2); check_proc ( $2, List.rev $4, $6 )  }
 
 procedure_define:
   | IDENT {add_proc($1); $1;}
@@ -103,8 +104,8 @@ parameter_defs_body:
   | parameter_defs_body COMMA parameter_def { $3 :: $1 } /*parameter_defs can be connected by commas*/
 
 parameter_def:
-  | VAL type_def_single_only { Snick_analyze.check_param ( Value, $2, Expr_None ) }
-  | REF type_def_single_only { Snick_analyze.check_param ( Reference, $2, Expr_None ) }
+  | VAL type_def_single_only { check_param ( Value, $2, Expr_None ) }
+  | REF type_def_single_only { check_param ( Reference, $2, Expr_None ) }
 
 /*Declarations*/
 declerations :
@@ -112,7 +113,7 @@ declerations :
   | { [] } /*Declaration can be blank*/
 
 decleration :
-  | type_def SEMICOLON { Snick_analyze.check_dec ($1, Expr_None) }
+  | type_def SEMICOLON { check_dec ($1, Expr_None) }
 
 type_def :
   | datatype IDENT {Single ($1,$2)}
@@ -143,18 +144,18 @@ statements:
 statement:
   | READ lvalue SEMICOLON { Read $2 }
   | WRITE expr SEMICOLON { Write $2 }
-  | lvalue ASSIGN rvalue SEMICOLON { Snick_analyze.check_assign ( Assign ($1, $3) ) }
-  | IDENT LPAREN exprs_nullable RPAREN SEMICOLON { Snick_analyze.check_invoke ( InvokeProc ($1, List.rev $3) ) } /* Invoke procedure*/
-  | IF expr THEN statements FI { IfThen( Snick_analyze.check_expr_bool ($2), List.rev $4) }
-  | IF expr THEN statements ELSE statements FI { IfThenElse ( Snick_analyze.check_expr_bool ($2), List.rev $4, List.rev $6) }
-  | WHILE expr DO statements OD { WhileDo ( Snick_analyze.check_expr_bool ($2), List.rev $4) }
+  | lvalue ASSIGN rvalue SEMICOLON { check_assign ( Assign ($1, $3) ) }
+  | IDENT LPAREN exprs_nullable RPAREN SEMICOLON { check_invoke ( InvokeProc ($1, List.rev $3) ) } /* Invoke procedure*/
+  | IF expr THEN statements FI { IfThen( check_expr_bool ($2), List.rev $4) }
+  | IF expr THEN statements ELSE statements FI { IfThenElse ( check_expr_bool ($2), List.rev $4, List.rev $6) }
+  | WHILE expr DO statements OD { WhileDo ( check_expr_bool ($2), List.rev $4) }
 
 rvalue :
   | expr { Rexpr $1 }
 
 lvalue:
-  | IDENT { Snick_analyze.check_lvalue ( LId ($1,Expr_None) ) }
-  | IDENT LBRACK exprs RBRACK  { Snick_analyze.check_lvalue ( LArrayElement ( $1, List.rev $3,Expr_None) ) }
+  | IDENT { check_lvalue ( LId ($1,Expr_None) ) }
+  | IDENT LBRACK exprs RBRACK  { check_lvalue ( LArrayElement ( $1, List.rev $3,Expr_None) ) }
 
 /*Expressions*/
 /*Multiple expressions connected by ","*/
@@ -173,21 +174,21 @@ expr:
   | INT_CONST { Eint ($1, Expr_Int) }
   | FLOAT_CONST { Efloat ($1, Expr_Float) }
   | STRING_CONST { Estring ($1, Expr_String) }
-  | lvalue { Snick_analyze.assign_expr (Elval ($1, Expr_None)) } 
+  | lvalue { assign_expr (Elval ($1, Expr_None)) } 
 
-  | expr PLUS expr {Snick_analyze.check_expr_op (Ebinop ($1, Op_add, $3, Expr_None)) }
-  | expr MINUS expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_sub, $3, Expr_None))  }
-  | expr MUL expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_mul, $3, Expr_None))  }
-  | expr DIV expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_div, $3, Expr_None))  }
-  | expr EQ expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_eq, $3, Expr_None))  }
-  | expr NOTEQ expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_not_eq, $3, Expr_None))  }
-  | expr LT expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_lt, $3, Expr_None))  }
-  | expr GT expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_gt, $3, Expr_None))  }
-  | expr LTEQ expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_lt_eq, $3, Expr_None))  }
-  | expr GTEQ expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_gt_eq, $3, Expr_None) ) }
-  | expr AND expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_and, $3, Expr_None))  }
-  | expr OR expr { Snick_analyze.check_expr_op (Ebinop ($1, Op_or, $3, Expr_None))  }
+  | expr PLUS expr {check_expr_op (Ebinop ($1, Op_add, $3, Expr_None)) }
+  | expr MINUS expr { check_expr_op (Ebinop ($1, Op_sub, $3, Expr_None))  }
+  | expr MUL expr { check_expr_op (Ebinop ($1, Op_mul, $3, Expr_None))  }
+  | expr DIV expr { check_expr_op (Ebinop ($1, Op_div, $3, Expr_None))  }
+  | expr EQ expr { check_expr_op (Ebinop ($1, Op_eq, $3, Expr_None))  }
+  | expr NOTEQ expr { check_expr_op (Ebinop ($1, Op_not_eq, $3, Expr_None))  }
+  | expr LT expr { check_expr_op (Ebinop ($1, Op_lt, $3, Expr_None))  }
+  | expr GT expr { check_expr_op (Ebinop ($1, Op_gt, $3, Expr_None))  }
+  | expr LTEQ expr { check_expr_op (Ebinop ($1, Op_lt_eq, $3, Expr_None))  }
+  | expr GTEQ expr { check_expr_op (Ebinop ($1, Op_gt_eq, $3, Expr_None) ) }
+  | expr AND expr { check_expr_op (Ebinop ($1, Op_and, $3, Expr_None))  }
+  | expr OR expr { check_expr_op (Ebinop ($1, Op_or, $3, Expr_None))  }
 
-  | MINUS expr %prec UMINUS { Snick_analyze.assign_expr (Eunop (Op_minus, $2, Expr_None)) }
-  | NOT expr  { Snick_analyze.assign_expr (Eunop (Op_not, $2, Expr_None)) }
-  | LPAREN expr RPAREN { Snick_analyze.assign_expr (Eparens ($2, Expr_None)) }
+  | MINUS expr %prec UMINUS { assign_expr (Eunop (Op_minus, $2, Expr_None)) }
+  | NOT expr  { assign_expr (Eunop (Op_not, $2, Expr_None)) }
+  | LPAREN expr RPAREN { assign_expr (Eparens ($2, Expr_None)) }
