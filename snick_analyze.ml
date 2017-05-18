@@ -81,6 +81,7 @@ let get_expr_type_for_datatype datatype =
 	| Bool -> Expr_Bool
   	| Int -> Expr_Int
   	| Float -> Expr_Float
+  	| String -> Expr_String
 ;;
 
 (* Get the expr_type from a typedef*)

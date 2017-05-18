@@ -52,6 +52,7 @@ let format_dataType datatype =
     | Bool -> "bool"
     | Int -> "int"
     | Float -> "float"
+    | String -> "string"
       
 (*formats the pair of datatype and identifier.*)
 let format_dataType_identifier datatype_identifier =  

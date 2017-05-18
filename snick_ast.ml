@@ -20,6 +20,7 @@ type datatype =
   | Bool
   | Int
   | Float
+  | String
 
 (* possible types of an expression, used for syntax checking *)
 type expr_type =
