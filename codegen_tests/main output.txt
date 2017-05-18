@@ -1,0 +1,30 @@
+D:\uni\year 5\Programming Language Implementation\Assignment\Stage 3\codegen tests>brill.exe main.txt
+The expecting value is:4 , Result:4
+The expecting value is:12 , Result:12
+The expecting value is:2 , Result:2
+The expecting value is:3.500000 , Result:3.500000
+The expecting value is:true , Result:true
+The expecting value is:20.000000 , Result:20.000000
+The expecting value is:0 , Result:0
+The expecting value is:30 , Result:30
+The expecting value is:7 , Result:7
+The expecting value is:-1 , Result:-1
+The expecting value is:1 , Result:1
+The expecting value is:12 , Result:12
+The expecting value is:0 , Result:0
+The expecting value is:0.750000 , Result:0.750000
+The expecting value is:0.750000 , Result:0.750000
+The expecting value is:0.750000 , Result:0.750000
+The expecting value is:11 , Result:11
+The expecting value is:-5 , Result:-5
+The expecting value is:false , Result:false
+The expecting value is:true , Result:true
+The expecting value is:false , Result:false
+The expecting value is:true , Result:true
+Correct IF-ELSE
+nThe expecting value is:555 , Result:555
+The expecting value is:5 , Result:5
+The expecting value is:0 , Result:0
+Input two positive integers to be added up: 10 12
+
+The result is: 22

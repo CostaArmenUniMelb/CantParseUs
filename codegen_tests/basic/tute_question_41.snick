@@ -1,0 +1,11 @@
+proc f(val int w, val int x, val int y, val int z)
+    int a[1..2, 2..4];
+    a[w,x] := 42;
+    a[y,z] := a[w,x];
+    write a[y,z];
+    write "\n";
+end
+
+proc main()
+    f(2, 3, 1, 4);
+end

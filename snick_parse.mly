@@ -11,6 +11,14 @@ open Snick_symbol
 open Snick_analyze
 
 let main_tbl = init_main_tbl;;
+
+(* remove unexpected double quotes at the begining and end of a String *)
+let string_clean str = 
+  if String.length str > 1 then
+    String.sub str 1 ((String.length str)-2)
+  else 
+    str
+
 %}
 
 /*Variables*/
@@ -173,7 +181,7 @@ expr:
   | BOOL_CONST { Ebool ($1, Expr_Bool) }
   | INT_CONST { Eint ($1, Expr_Int) }
   | FLOAT_CONST { Efloat ($1, Expr_Float) }
-  | STRING_CONST { Estring ($1, Expr_String) }
+  | STRING_CONST { Estring (string_clean $1 , Expr_String) }
   | lvalue { assign_expr (Elval ($1, Expr_None)) } 
 
   | expr PLUS expr {check_expr_op (Ebinop ($1, Op_add, $3, Expr_None)) }

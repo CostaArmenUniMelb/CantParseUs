@@ -1,0 +1,63 @@
+   call main
+   halt
+main:
+# prologue
+   push_stack_frame 2
+# parameters
+# declerations
+   int_const r0, 0
+   store 0, r0
+   int_const r0, 0
+   store 1, r0
+# statements
+# assign
+   int_const r0, 2
+   store 0, r0
+# assign
+   int_const r0, 8
+   store 1, r0
+# InvokeProc
+   load_address r0, 0
+   load_address r1, 1
+   call test_ref
+# write
+   string_const r0, "c="
+   call_builtin print_string
+# write
+   load r0, 0
+   call_builtin print_int
+# write
+   string_const r0, "\nd="
+   call_builtin print_string
+# write
+   load r0, 1
+   call_builtin print_int
+# epilogue
+   pop_stack_frame 2
+   return
+test_ref:
+# prologue
+   push_stack_frame 2
+# parameters
+   store 0, r0
+   store 1, r1
+# declerations
+# statements
+# assign
+   load r0, 1
+   load_indirect r0, r0
+   int_const r1, 2
+   mul_int r0, r0, r1
+   load r1, 1
+   store_indirect r1, r0
+# assign
+   load r0, 0
+   load_indirect r0, r0
+   load r1, 1
+   load_indirect r1, r1
+   mul_int r0, r0, r1
+   load r1, 0
+   store_indirect r1, r0
+# epilogue
+   pop_stack_frame 2
+   return

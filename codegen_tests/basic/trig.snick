@@ -1,0 +1,110 @@
+# Implementations of sin and cos using Taylor series expansion
+# (by Evan Brumley)
+
+proc main()
+    float sin_output;
+    float cos_output;
+    int testval;
+
+    write "Test Value: ";
+    read testval;
+    sin(testval,sin_output);
+    cos(testval,cos_output);
+
+    write "\n";
+
+    write "Sin of ";
+    write testval;
+    write " = ";
+    write sin_output;
+
+    write "\n";
+
+    write "Cos of ";
+    write testval;
+    write " = ";
+    write cos_output;
+end 
+
+# Calculate sin to approx. 4 significant digits using Taylor series
+proc sin(val float x, ref float out)
+    int num_iterations;
+    int i;
+    float total;
+    float numerator;
+    float denominator;
+    float multiplier;
+
+    num_iterations := 12;
+
+    total := 0;
+    i := 0;
+    while (i < num_iterations) do
+        power(-1,i,numerator);
+        factorial(2*i+1,denominator);
+        power(x,(2*i+1),multiplier);
+        total := total + (numerator / denominator) * multiplier;
+        i := i + 1;
+    od
+
+    out := total;
+end
+
+# Calculate cos to approx. 4 significant digits using Taylor series
+proc cos(val float x, ref float out)
+    int num_iterations;
+    int i;
+    float total;
+    float numerator;
+    float denominator;
+    float multiplier;
+
+    num_iterations := 12;
+
+    total := 0;
+    i := 0;
+    while (i < num_iterations) do
+        power(-1,i,numerator);
+        factorial(2*i,denominator);
+        power(x,(2*i),multiplier);
+        total := total + (numerator / denominator) * multiplier;
+        i := i + 1;
+    od
+
+    out := total;
+end
+  
+# Calculate x to the power of n
+proc power(val float x, val int n, ref float out)
+    float res;
+
+    if n = 0 then
+        out := 1;
+    else
+        if n = 1 then
+            out := x;
+        else 
+            power(x*x, n/2, res);
+            if 2*(n/2) = n then 
+                out := res;        # n was even
+            else 
+                out := x * res;    # n was odd
+            fi
+        fi
+    fi
+end
+
+# Calculate the factorial of x
+proc factorial(val int x, ref float out)
+    int res;
+
+    if (x < 1) then
+        out := 1;
+    else
+        out := x;
+        while (x > 1) do
+            x := x - 1;
+            out := out * x;
+        od
+    fi
+end

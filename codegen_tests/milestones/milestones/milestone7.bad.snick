@@ -1,0 +1,14 @@
+# Phase 7 test case
+# Semantic error test
+
+proc p(ref float x)
+    write x;
+end
+
+proc main()
+    int a;
+
+    a := 82;
+
+    p(a);
+end
