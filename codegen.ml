@@ -776,10 +776,8 @@ module Statement = struct
         (*convert address to value if identifier is a parameter passed by reference*)
         let store_code = 
             match lv_var.passby with
-            | Value -> []
-            | Reference -> [StoreIndirect(0,0)]
-            @
-            [Store(lv_var_slotNum, 0)] in
+            | Value -> [Store(lv_var_slotNum, 0)]
+            | Reference -> [StoreIndirect(0,0);Store(lv_var_slotNum, 0)] in
         let read_code = [Read.instr(lv_var_datatype)] in
         let comment_code = [Comment("read")] in
         [
