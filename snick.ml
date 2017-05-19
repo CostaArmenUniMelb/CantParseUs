@@ -38,8 +38,8 @@ let main () =
     | Compile -> 
       let generated_ir = generate(prog) in
       let oc = open_out file_output in 
-      (* print_string (generated_ir); *)
-      print_string (sprintf "Generated output to %s successfully!!\n" file_output);
+      print_string (generated_ir);
+      (* print_string (sprintf "Generated output to %s successfully!!\n" file_output); *)
       fprintf oc "%s\n" generated_ir;
       close_out oc;
 
